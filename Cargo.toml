@@ -1,0 +1,14 @@
+[package]
+name = "mameda"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.5.23", features = ["derive"] }
+crossterm = "0.28.1"
+jsonlrpc = "0.2.2"
+jsonlrpc_mio = "0.2.1"
+orfail = "1.1.0"
+ratatui = "0.29.0"
+serde = { version = "1.0.215", features = ["derive"] }
+serde_json = "1.0.133"
