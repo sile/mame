@@ -8,7 +8,10 @@ clap = { version = "4.5.23", features = ["derive"] }
 crossterm = "0.28.1"
 jsonlrpc = "0.2.2"
 jsonlrpc_mio = "0.2.1"
+log = "0.4.22"
+mio = { version = "1.0.3", default-features = false, features = ["os-poll", "net"] }
 orfail = "1.1.0"
 ratatui = "0.29.0"
 serde = { version = "1.0.215", features = ["derive"] }
 serde_json = "1.0.133"
+simplelog = { version = "0.12.2", default-features = false, features = ["local-offset"] }
