@@ -1,14 +1,19 @@
-use std::net::SocketAddr;
+use std::{net::SocketAddr, thread::JoinHandle};
 
 use jsonlrpc_mio::RpcServer;
 use mio::{Events, Poll, Token};
 use orfail::OrFail;
+use ratatui::DefaultTerminal;
+
+use crate::input::InputThread;
 
 #[derive(Debug)]
 pub struct Editor {
     poller: Poll,
     events: Events,
     rpc_server: RpcServer,
+    terminal: DefaultTerminal,
+    input_thread_handle: JoinHandle<()>,
 }
 
 impl Editor {
@@ -21,10 +26,18 @@ impl Editor {
             Token(usize::MAX),
         )
         .or_fail()?;
+
+        let mut terminal = ratatui::init();
+        terminal.clear().or_fail()?;
+
+        let input_thread_handle = InputThread::start(rpc_server.listen_addr()).or_fail()?;
+
         Ok(Self {
             poller,
             events: Events::with_capacity(1024),
             rpc_server,
+            terminal,
+            input_thread_handle,
         })
     }
 
