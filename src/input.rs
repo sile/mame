@@ -4,6 +4,8 @@ use jsonlrpc::RpcClient;
 use mio::net::TcpStream;
 use orfail::OrFail;
 
+use crate::rpc::{NotifyTerminalEventParams, Request};
+
 #[derive(Debug)]
 pub struct InputThread {
     rpc_client: RpcClient<TcpStream>,
@@ -11,7 +13,6 @@ pub struct InputThread {
 
 impl InputThread {
     pub fn start(editor_addr: SocketAddr) -> orfail::Result<JoinHandle<()>> {
-        // TODO: terminate editor if
         let stream = TcpStream::connect(editor_addr).or_fail()?;
         let rpc_client = RpcClient::new(stream);
         let handle = std::thread::spawn(move || Self { rpc_client }.run());
@@ -30,7 +31,13 @@ impl InputThread {
 
     fn run_one(&mut self) -> orfail::Result<()> {
         let event = crossterm::event::read().or_fail()?;
-        log::debug!("event: {event:?}"); // TODO: remove
+        log::trace!("Terminal event: {event:?}");
+
+        let request = Request::NotifyTerminalEvent {
+            jsonrpc: jsonlrpc::JsonRpcVersion::V2,
+            params: NotifyTerminalEventParams { event },
+        };
+        self.rpc_client.cast(&request).or_fail()?;
         Ok(())
     }
 }

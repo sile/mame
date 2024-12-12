@@ -5,13 +5,13 @@ use mio::{Events, Poll, Token};
 use orfail::OrFail;
 use ratatui::DefaultTerminal;
 
-use crate::input::InputThread;
+use crate::{input::InputThread, rpc::Request};
 
 #[derive(Debug)]
 pub struct Editor {
     poller: Poll,
     events: Events,
-    rpc_server: RpcServer,
+    rpc_server: RpcServer<Request>,
     terminal: DefaultTerminal,
     input_thread_handle: JoinHandle<()>,
 }
