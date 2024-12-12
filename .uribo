@@ -1,0 +1,13 @@
+{
+  "execute": {
+    "command": "cargo",
+    "args": [
+      "run",
+      "run",
+      "--logfile",
+      "/tmp/mameda.log",
+      "--loglevel",
+      "debug"
+    ]
+  }
+}
