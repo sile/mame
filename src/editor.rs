@@ -17,6 +17,7 @@ pub struct Editor {
     rpc_server: RpcServer<Request>,
     terminal: DefaultTerminal,
     input_thread_handle: JoinHandle<()>,
+    exit: bool,
 }
 
 impl Editor {
@@ -41,13 +42,14 @@ impl Editor {
             rpc_server,
             terminal,
             input_thread_handle,
+            exit: false,
         })
     }
 
     pub fn run(mut self) -> orfail::Result<()> {
-        log::info!("Started editor: addr={}", self.rpc_server.listen_addr());
+        log::info!("Editor started: addr={}", self.rpc_server.listen_addr());
 
-        loop {
+        while !self.exit {
             // TODO: handle key event
             self.poller.poll(&mut self.events, None).or_fail()?;
             for event in self.events.iter() {
@@ -59,6 +61,9 @@ impl Editor {
                 self.handle_request(from, request).or_fail()?;
             }
         }
+
+        log::info!("Editor exited: addr={}", self.rpc_server.listen_addr());
+        Ok(())
     }
 
     fn handle_request(&mut self, from: ClientId, request: Request) -> orfail::Result<()> {
@@ -69,6 +74,9 @@ impl Editor {
             Request::Open { id, params, .. } => self
                 .handle_open(Caller::new(from, id), params.path)
                 .or_fail()?,
+            Request::Exit { .. } => {
+                self.exit = true;
+            }
         }
         Ok(())
     }

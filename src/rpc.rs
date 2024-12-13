@@ -49,6 +49,9 @@ pub enum Request {
         id: RequestId,
         params: OpenParams,
     },
+    Exit {
+        jsonrpc: JsonRpcVersion,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
