@@ -1,6 +1,6 @@
 use std::{net::SocketAddr, thread::JoinHandle};
 
-use jsonlrpc_mio::RpcServer;
+use jsonlrpc_mio::{ClientId, RpcServer};
 use mio::{Events, Poll, Token};
 use orfail::OrFail;
 use ratatui::DefaultTerminal;
@@ -51,10 +51,41 @@ impl Editor {
                 self.rpc_server
                     .handle_event(&mut self.poller, event)
                     .or_fail()?;
-                while let Some(request) = self.rpc_server.try_recv() {
-                    todo!("{request:?}");
-                }
+            }
+            while let Some((from, request)) = self.rpc_server.try_recv() {
+                self.handle_request(from, request).or_fail()?;
             }
         }
+    }
+
+    fn handle_request(&mut self, _from: ClientId, request: Request) -> orfail::Result<()> {
+        match request {
+            Request::NotifyTerminalEvent { params, .. } => {
+                self.handle_terminal_event(params.event).or_fail()?;
+            }
+        }
+        Ok(())
+    }
+
+    fn handle_terminal_event(&mut self, event: crossterm::event::Event) -> orfail::Result<()> {
+        match event {
+            crossterm::event::Event::FocusGained => todo!(),
+            crossterm::event::Event::FocusLost => todo!(),
+            crossterm::event::Event::Key(key_event) => {
+                self.handle_key_event(key_event).or_fail()?
+            }
+            crossterm::event::Event::Mouse(_mouse_event) => todo!(),
+            crossterm::event::Event::Paste(_) => todo!(),
+            crossterm::event::Event::Resize(_, _) => todo!(),
+        }
+        Ok(())
+    }
+
+    fn handle_key_event(&mut self, event: crossterm::event::KeyEvent) -> orfail::Result<()> {
+        if event.kind != crossterm::event::KeyEventKind::Press {
+            return Ok(());
+        }
+        log::info!("key: {event:?}");
+        Ok(())
     }
 }
