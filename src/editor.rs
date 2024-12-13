@@ -1,11 +1,14 @@
-use std::{net::SocketAddr, thread::JoinHandle};
+use std::{net::SocketAddr, path::PathBuf, thread::JoinHandle};
 
 use jsonlrpc_mio::{ClientId, RpcServer};
 use mio::{Events, Poll, Token};
 use orfail::OrFail;
 use ratatui::DefaultTerminal;
 
-use crate::{input::InputThread, rpc::Request};
+use crate::{
+    input::InputThread,
+    rpc::{Caller, Request},
+};
 
 #[derive(Debug)]
 pub struct Editor {
@@ -58,13 +61,20 @@ impl Editor {
         }
     }
 
-    fn handle_request(&mut self, _from: ClientId, request: Request) -> orfail::Result<()> {
+    fn handle_request(&mut self, from: ClientId, request: Request) -> orfail::Result<()> {
         match request {
             Request::NotifyTerminalEvent { params, .. } => {
                 self.handle_terminal_event(params.event).or_fail()?;
             }
+            Request::Open { id, params, .. } => self
+                .handle_open(Caller::new(from, id), params.path)
+                .or_fail()?,
         }
         Ok(())
+    }
+
+    fn handle_open(&mut self, caller: Caller, path: PathBuf) -> orfail::Result<()> {
+        todo!()
     }
 
     fn handle_terminal_event(&mut self, event: crossterm::event::Event) -> orfail::Result<()> {
