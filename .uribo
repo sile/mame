@@ -6,9 +6,10 @@
       "run",
       "README.md",
       "--logfile",
-      "/tmp/mameda.log",
+      "mameda.log",
       "--loglevel",
       "debug"
-    ]
+    ],
+    "working_dir": "."
   }
 }
