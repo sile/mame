@@ -46,6 +46,10 @@ impl Editor {
         })
     }
 
+    pub fn addr(&self) -> SocketAddr {
+        self.rpc_server.listen_addr()
+    }
+
     pub fn run(mut self) -> orfail::Result<()> {
         log::info!("Editor started: addr={}", self.rpc_server.listen_addr());
 

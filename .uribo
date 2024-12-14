@@ -4,6 +4,7 @@
     "args": [
       "run",
       "run",
+      "README.md",
       "--logfile",
       "/tmp/mameda.log",
       "--loglevel",

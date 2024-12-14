@@ -1,14 +1,20 @@
 use std::path::PathBuf;
 
 use clap::Args;
+use jsonlrpc::RequestId;
 use log::LevelFilter;
 use orfail::OrFail;
 use simplelog::{ConfigBuilder, WriteLogger};
 
-use crate::editor::Editor;
+use crate::{
+    editor::Editor,
+    rpc::{self, OpenParams, Request},
+};
 
 #[derive(Debug, Clone, Args)]
 pub struct RunCommand {
+    pub path: Option<PathBuf>,
+
     #[clap(long)]
     pub logfile: Option<PathBuf>,
 
@@ -36,6 +42,24 @@ impl RunCommand {
         }
 
         let editor = Editor::new(port).or_fail()?;
+        let addr = editor.addr();
+        if let Some(path) = self.path {
+            std::thread::spawn(move || {
+                let request = Request::Open {
+                    jsonrpc: jsonlrpc::JsonRpcVersion::V2,
+                    id: RequestId::Number(0),
+                    params: OpenParams { path },
+                };
+                if rpc::call::<serde_json::Value>(addr, &request).is_err() {
+                    // TODO: show error message
+                    let request = Request::Exit {
+                        jsonrpc: jsonlrpc::JsonRpcVersion::V2,
+                    };
+                    let _ = rpc::cast(addr, &request);
+                }
+            });
+        }
+
         editor.run().or_fail()?;
         Ok(())
     }
