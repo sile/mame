@@ -26,7 +26,6 @@ impl BufferId {
 pub struct Buffer {
     pub id: BufferId,
     pub lines: Vec<String>,
-    pub needs_redraw: bool,
     pub start_line: NonZeroUsize,
     pub cursor: Cursor,
 }
@@ -37,7 +36,6 @@ impl Buffer {
         Ok(Self {
             id: BufferId::from_path(path),
             lines: Vec::new(),
-            needs_redraw: true,
             start_line: NonZeroUsize::MIN,
             cursor: Cursor::new(),
         })
@@ -50,7 +48,6 @@ impl Buffer {
         Ok(Self {
             id: BufferId::from_path(path),
             lines: content.lines().map(|l| l.to_owned()).collect(),
-            needs_redraw: true,
             start_line: NonZeroUsize::MIN,
             cursor: Cursor::new(),
         })

@@ -25,6 +25,7 @@ pub struct Editor {
     exit: bool,
     buffers: BTreeMap<BufferId, Buffer>,
     current_buffer_id: Option<BufferId>,
+    needs_redraw: bool,
 }
 
 impl Editor {
@@ -45,6 +46,7 @@ impl Editor {
             exit: false,
             buffers: BTreeMap::new(),
             current_buffer_id: None,
+            needs_redraw: true,
         })
     }
 
@@ -71,10 +73,11 @@ impl Editor {
                 self.handle_request(from, request).or_fail()?;
             }
 
-            if self.needs_redraw() {
+            if self.needs_redraw {
                 terminal
                     .draw(|frame| frame.render_widget(&self, frame.area()))
                     .or_fail()?;
+                self.needs_redraw = false;
             }
 
             if input_thread_handle.is_finished() {
@@ -137,10 +140,11 @@ impl Editor {
             Buffer::open_file(&path).map_err(|e| RpcError::file_error(path, e))?
         };
 
-        // TODO: existence check
+        // TODO: buffer existence check (skip reopening if exists)
         log::info!("New buffer: {:?}", buffer.id);
         self.current_buffer_id = Some(buffer.id.clone());
         self.buffers.insert(buffer.id.clone(), buffer);
+        self.needs_redraw = true;
 
         Ok(OpenReturnValue { new })
     }
@@ -167,14 +171,6 @@ impl Editor {
         Ok(())
     }
 
-    fn needs_redraw(&self) -> bool {
-        if let Some(id) = &self.current_buffer_id {
-            return self.buffers.get(id).is_some_and(|b| b.needs_redraw);
-        }
-
-        false
-    }
-
     fn current_buffer(&self) -> Option<&Buffer> {
         self.current_buffer_id
             .as_ref()
@@ -188,9 +184,13 @@ impl widgets::Widget for &Editor {
             return;
         };
 
+        // TODO: footer lines
+
         let text = buffer
             .lines
             .iter()
+            .skip(buffer.start_line.get() - 1)
+            .take(area.as_size().height as usize)
             .cloned()
             .map(|line| Line::from(line))
             .collect::<Vec<_>>();

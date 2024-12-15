@@ -4,7 +4,7 @@
     "args": [
       "run",
       "run",
-      "README.md",
+      "src/editor.rs",
       "--logfile",
       "mameda.log",
       "--loglevel",
