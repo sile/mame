@@ -1,10 +1,12 @@
 use std::{collections::BTreeMap, net::SocketAddr, path::PathBuf};
 
+use crossterm::event::KeyCode;
 use jsonlrpc::{JsonRpcVersion, RequestId};
 use jsonlrpc_mio::{ClientId, RpcServer};
 use mio::{Events, Poll, Token};
 use orfail::OrFail;
 use ratatui::{
+    layout::{Position, Size},
     prelude::{Buffer as RenderBuffer, Rect},
     text::Line,
     widgets::{self, Paragraph},
@@ -12,7 +14,7 @@ use ratatui::{
 use serde::Serialize;
 
 use crate::{
-    buffer::{Buffer, BufferId},
+    buffer::{Buffer, BufferId, CursorDelta},
     input::InputThread,
     rpc::{Caller, OpenReturnValue, Request, RpcError, RpcResult},
 };
@@ -24,8 +26,9 @@ pub struct Editor {
     rpc_server: RpcServer<Request>,
     exit: bool,
     buffers: BTreeMap<BufferId, Buffer>,
-    current_buffer_id: Option<BufferId>,
+    current_buffer_id: Option<BufferId>, // TODO: non optional
     needs_redraw: bool,
+    terminal_size: Size,
 }
 
 impl Editor {
@@ -47,6 +50,7 @@ impl Editor {
             buffers: BTreeMap::new(),
             current_buffer_id: None,
             needs_redraw: true,
+            terminal_size: Size::default(),
         })
     }
 
@@ -57,6 +61,7 @@ impl Editor {
     pub fn run(mut self) -> orfail::Result<()> {
         let mut terminal = ratatui::init();
         terminal.clear().or_fail()?;
+        self.terminal_size = terminal.size().or_fail()?;
 
         let input_thread_handle = InputThread::start(self.rpc_server.listen_addr()).or_fail()?;
 
@@ -75,7 +80,10 @@ impl Editor {
 
             if self.needs_redraw {
                 terminal
-                    .draw(|frame| frame.render_widget(&self, frame.area()))
+                    .draw(|frame| {
+                        frame.render_widget(&self, frame.area());
+                        frame.set_cursor_position(self.cursor_position());
+                    })
                     .or_fail()?;
                 self.needs_redraw = false;
             }
@@ -163,11 +171,35 @@ impl Editor {
         Ok(())
     }
 
-    fn handle_key_event(&mut self, event: crossterm::event::KeyEvent) -> orfail::Result<()> {
-        if event.kind != crossterm::event::KeyEventKind::Press {
+    fn handle_key_event(&mut self, key: crossterm::event::KeyEvent) -> orfail::Result<()> {
+        if key.kind != crossterm::event::KeyEventKind::Press {
             return Ok(());
         }
-        log::info!("key: {event:?}");
+        log::debug!("key: {key:?}");
+
+        let terminal_size = self.terminal_size;
+        let Some(buffer) = self.current_buffer_mut() else {
+            return Ok(());
+        };
+
+        // TODO: key mapping
+        match key.code {
+            KeyCode::Up => {
+                buffer.move_cursor(CursorDelta::xy(0, -1), terminal_size);
+            }
+            KeyCode::Down => {
+                buffer.move_cursor(CursorDelta::xy(0, 1), terminal_size);
+            }
+            KeyCode::Right => {
+                buffer.move_cursor(CursorDelta::xy(1, 0), terminal_size);
+            }
+            KeyCode::Left => {
+                buffer.move_cursor(CursorDelta::xy(-1, 0), terminal_size);
+            }
+            _ => {}
+        }
+
+        self.needs_redraw = true; // TODO: optimize
         Ok(())
     }
 
@@ -175,6 +207,18 @@ impl Editor {
         self.current_buffer_id
             .as_ref()
             .and_then(|id| self.buffers.get(id))
+    }
+
+    fn current_buffer_mut(&mut self) -> Option<&mut Buffer> {
+        self.current_buffer_id
+            .as_ref()
+            .and_then(|id| self.buffers.get_mut(id))
+    }
+
+    fn cursor_position(&self) -> Position {
+        self.current_buffer()
+            .map(|b| b.cursor_position())
+            .unwrap_or_default()
     }
 }
 
@@ -189,12 +233,13 @@ impl widgets::Widget for &Editor {
         let text = buffer
             .lines
             .iter()
-            .skip(buffer.start_line.get() - 1)
+            .skip(buffer.start_line)
             .take(area.as_size().height as usize)
             .cloned()
             .map(|line| Line::from(line))
             .collect::<Vec<_>>();
 
+        // TODO: try wrap() option
         Paragraph::new(text).render(area, render_buffer);
     }
 }
