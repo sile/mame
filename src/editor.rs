@@ -1,10 +1,14 @@
-use std::{collections::BTreeMap, net::SocketAddr, path::PathBuf, thread::JoinHandle};
+use std::{collections::BTreeMap, net::SocketAddr, path::PathBuf};
 
 use jsonlrpc::{JsonRpcVersion, RequestId};
 use jsonlrpc_mio::{ClientId, RpcServer};
 use mio::{Events, Poll, Token};
 use orfail::OrFail;
-use ratatui::DefaultTerminal;
+use ratatui::{
+    prelude::{Buffer as RenderBuffer, Rect},
+    text::Line,
+    widgets::{self, Paragraph},
+};
 use serde::Serialize;
 
 use crate::{
@@ -18,8 +22,6 @@ pub struct Editor {
     poller: Poll,
     events: Events,
     rpc_server: RpcServer<Request>,
-    terminal: DefaultTerminal,
-    input_thread_handle: JoinHandle<()>,
     exit: bool,
     buffers: BTreeMap<BufferId, Buffer>,
     current_buffer_id: Option<BufferId>,
@@ -36,17 +38,10 @@ impl Editor {
         )
         .or_fail()?;
 
-        let mut terminal = ratatui::init();
-        terminal.clear().or_fail()?;
-
-        let input_thread_handle = InputThread::start(rpc_server.listen_addr()).or_fail()?;
-
         Ok(Self {
             poller,
             events: Events::with_capacity(1024),
             rpc_server,
-            terminal,
-            input_thread_handle,
             exit: false,
             buffers: BTreeMap::new(),
             current_buffer_id: None,
@@ -58,10 +53,14 @@ impl Editor {
     }
 
     pub fn run(mut self) -> orfail::Result<()> {
+        let mut terminal = ratatui::init();
+        terminal.clear().or_fail()?;
+
+        let input_thread_handle = InputThread::start(self.rpc_server.listen_addr()).or_fail()?;
+
         log::info!("Editor started: addr={}", self.rpc_server.listen_addr());
 
         while !self.exit {
-            // TODO: handle key event
             self.poller.poll(&mut self.events, None).or_fail()?;
             for event in self.events.iter() {
                 self.rpc_server
@@ -70,6 +69,16 @@ impl Editor {
             }
             while let Some((from, request)) = self.rpc_server.try_recv() {
                 self.handle_request(from, request).or_fail()?;
+            }
+
+            if self.needs_redraw() {
+                terminal
+                    .draw(|frame| frame.render_widget(&self, frame.area()))
+                    .or_fail()?;
+            }
+
+            if input_thread_handle.is_finished() {
+                todo!();
             }
         }
 
@@ -156,5 +165,36 @@ impl Editor {
         }
         log::info!("key: {event:?}");
         Ok(())
+    }
+
+    fn needs_redraw(&self) -> bool {
+        if let Some(id) = &self.current_buffer_id {
+            return self.buffers.get(id).is_some_and(|b| b.needs_redraw);
+        }
+
+        false
+    }
+
+    fn current_buffer(&self) -> Option<&Buffer> {
+        self.current_buffer_id
+            .as_ref()
+            .and_then(|id| self.buffers.get(id))
+    }
+}
+
+impl widgets::Widget for &Editor {
+    fn render(self, area: Rect, render_buffer: &mut RenderBuffer) {
+        let Some(buffer) = self.current_buffer() else {
+            return;
+        };
+
+        let text = buffer
+            .lines
+            .iter()
+            .cloned()
+            .map(|line| Line::from(line))
+            .collect::<Vec<_>>();
+
+        Paragraph::new(text).render(area, render_buffer);
     }
 }
