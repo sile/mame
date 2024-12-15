@@ -72,6 +72,27 @@ pub struct OpenParams {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OpenResult {
+pub struct OpenReturnValue {
     pub new: bool,
 }
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum RpcError {
+    FileError {
+        path: PathBuf,
+        kind: std::io::ErrorKind,
+        reason: String,
+    },
+}
+
+impl RpcError {
+    pub fn file_error(path: PathBuf, error: std::io::Error) -> Self {
+        Self::FileError {
+            path,
+            kind: error.kind(),
+            reason: error.to_string(),
+        }
+    }
+}
+
+pub type RpcResult<T> = Result<T, RpcError>;

@@ -1,14 +1,16 @@
-use std::{net::SocketAddr, path::PathBuf, thread::JoinHandle};
+use std::{collections::BTreeMap, net::SocketAddr, path::PathBuf, thread::JoinHandle};
 
+use jsonlrpc::{JsonRpcVersion, RequestId};
 use jsonlrpc_mio::{ClientId, RpcServer};
 use mio::{Events, Poll, Token};
 use orfail::OrFail;
 use ratatui::DefaultTerminal;
+use serde::Serialize;
 
 use crate::{
-    buffer::Buffer,
+    buffer::{Buffer, BufferId},
     input::InputThread,
-    rpc::{Caller, Request},
+    rpc::{Caller, OpenReturnValue, Request, RpcError, RpcResult},
 };
 
 #[derive(Debug)]
@@ -19,6 +21,7 @@ pub struct Editor {
     terminal: DefaultTerminal,
     input_thread_handle: JoinHandle<()>,
     exit: bool,
+    buffers: BTreeMap<BufferId, Buffer>,
 }
 
 impl Editor {
@@ -44,6 +47,7 @@ impl Editor {
             terminal,
             input_thread_handle,
             exit: false,
+            buffers: BTreeMap::new(),
         })
     }
 
@@ -78,8 +82,8 @@ impl Editor {
             }
             Request::Open { id, params, .. } => {
                 let caller = Caller::new(from, id);
-                self.handle_open(params.path).or_fail()?;
-                // TODO: reply
+                let result = self.handle_open(params.path);
+                self.reply(caller, result).or_fail()?;
             }
             Request::Exit { .. } => {
                 self.exit = true;
@@ -88,10 +92,45 @@ impl Editor {
         Ok(())
     }
 
-    fn handle_open(&mut self, path: PathBuf) -> orfail::Result<()> {
+    fn reply<T: Serialize>(&mut self, caller: Caller, result: RpcResult<T>) -> orfail::Result<()> {
+        match result {
+            Ok(result) => {
+                #[derive(Serialize)]
+                struct Response<T> {
+                    jsonrpc: JsonRpcVersion,
+                    id: RequestId,
+                    result: T,
+                }
+                let response = Response {
+                    jsonrpc: JsonRpcVersion::V2,
+                    id: caller.request_id,
+                    result,
+                };
+                self.rpc_server
+                    .reply(&mut self.poller, caller.client_id, &response)
+                    .or_fail()?;
+            }
+            Err(error) => {
+                todo!("{error:?}");
+            }
+        }
+        Ok(())
+    }
+
+    fn handle_open(&mut self, path: PathBuf) -> RpcResult<OpenReturnValue> {
         log::info!("Open file: {}", path.display());
-        let buffer = Buffer::from_file(&path).or_fail();
-        todo!()
+        let new = !path.exists();
+        let buffer = if new {
+            Buffer::new(&path).map_err(|e| RpcError::file_error(path, e))?
+        } else {
+            Buffer::open_file(&path).map_err(|e| RpcError::file_error(path, e))?
+        };
+
+        // TODO: existence check
+        log::info!("New buffer: {:?}", buffer.id);
+        self.buffers.insert(buffer.id.clone(), buffer);
+
+        Ok(OpenReturnValue { new })
     }
 
     fn handle_terminal_event(&mut self, event: crossterm::event::Event) -> orfail::Result<()> {
