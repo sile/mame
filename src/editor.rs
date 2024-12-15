@@ -196,6 +196,15 @@ impl Editor {
             KeyCode::Left => {
                 buffer.move_cursor(CursorDelta::xy(-1, 0), terminal_size);
             }
+            KeyCode::Char(c) if !c.is_control() => {
+                buffer.insert_char(c);
+            }
+            KeyCode::Enter => {
+                buffer.insert_newline();
+            }
+            KeyCode::Backspace => {
+                buffer.backspace_char();
+            }
             _ => {}
         }
 
