@@ -22,6 +22,7 @@ pub struct Editor {
     input_thread_handle: JoinHandle<()>,
     exit: bool,
     buffers: BTreeMap<BufferId, Buffer>,
+    current_buffer_id: Option<BufferId>,
 }
 
 impl Editor {
@@ -48,6 +49,7 @@ impl Editor {
             input_thread_handle,
             exit: false,
             buffers: BTreeMap::new(),
+            current_buffer_id: None,
         })
     }
 
@@ -128,6 +130,7 @@ impl Editor {
 
         // TODO: existence check
         log::info!("New buffer: {:?}", buffer.id);
+        self.current_buffer_id = Some(buffer.id.clone());
         self.buffers.insert(buffer.id.clone(), buffer);
 
         Ok(OpenReturnValue { new })

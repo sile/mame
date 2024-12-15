@@ -1,4 +1,7 @@
-use std::path::{Path, PathBuf};
+use std::{
+    num::NonZeroUsize,
+    path::{Path, PathBuf},
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct BufferId {
@@ -23,6 +26,9 @@ impl BufferId {
 pub struct Buffer {
     pub id: BufferId,
     pub lines: Vec<String>,
+    pub dirty: bool,
+    pub start_line: NonZeroUsize,
+    pub cursor: Cursor,
 }
 
 impl Buffer {
@@ -31,6 +37,9 @@ impl Buffer {
         Ok(Self {
             id: BufferId::from_path(path),
             lines: Vec::new(),
+            dirty: true,
+            start_line: NonZeroUsize::MIN,
+            cursor: Cursor::new(),
         })
     }
 
@@ -41,6 +50,24 @@ impl Buffer {
         Ok(Self {
             id: BufferId::from_path(path),
             lines: content.lines().map(|l| l.to_owned()).collect(),
+            dirty: true,
+            start_line: NonZeroUsize::MIN,
+            cursor: Cursor::new(),
         })
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct Cursor {
+    pub line: NonZeroUsize,
+    pub column: NonZeroUsize,
+}
+
+impl Cursor {
+    pub fn new() -> Self {
+        Self {
+            line: NonZeroUsize::MIN,
+            column: NonZeroUsize::MIN,
+        }
     }
 }
