@@ -61,7 +61,7 @@ impl Editor {
     pub fn run(mut self) -> orfail::Result<()> {
         let mut terminal = ratatui::init();
         terminal.clear().or_fail()?;
-        self.terminal_size = terminal.size().or_fail()?;
+        self.terminal_size = terminal.size().or_fail()?; // TODO: .get_frame().area()
 
         let input_thread_handle = InputThread::start(self.rpc_server.listen_addr()).or_fail()?;
 
@@ -94,6 +94,8 @@ impl Editor {
         }
 
         log::info!("Editor exited: addr={}", self.rpc_server.listen_addr());
+        ratatui::restore();
+
         Ok(())
     }
 
