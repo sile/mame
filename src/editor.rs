@@ -6,6 +6,7 @@ use orfail::OrFail;
 use ratatui::DefaultTerminal;
 
 use crate::{
+    buffer::Buffer,
     input::InputThread,
     rpc::{Caller, Request},
 };
@@ -75,9 +76,11 @@ impl Editor {
             Request::NotifyTerminalEvent { params, .. } => {
                 self.handle_terminal_event(params.event).or_fail()?;
             }
-            Request::Open { id, params, .. } => self
-                .handle_open(Caller::new(from, id), params.path)
-                .or_fail()?,
+            Request::Open { id, params, .. } => {
+                let caller = Caller::new(from, id);
+                self.handle_open(params.path).or_fail()?;
+                // TODO: reply
+            }
             Request::Exit { .. } => {
                 self.exit = true;
             }
@@ -85,7 +88,9 @@ impl Editor {
         Ok(())
     }
 
-    fn handle_open(&mut self, caller: Caller, path: PathBuf) -> orfail::Result<()> {
+    fn handle_open(&mut self, path: PathBuf) -> orfail::Result<()> {
+        log::info!("Open file: {}", path.display());
+        let buffer = Buffer::from_file(&path).or_fail();
         todo!()
     }
 
