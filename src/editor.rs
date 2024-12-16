@@ -16,7 +16,9 @@ use serde::Serialize;
 use crate::{
     buffer::{Buffer, BufferId, CursorDelta},
     input::InputThread,
-    rpc::{Caller, OpenReturnValue, Request, RpcError, RpcResult},
+    rpc::{
+        Caller, OpenReturnValue, Request, RpcError, RpcResult, StartLspParams, StartLspReturnValue,
+    },
 };
 
 #[derive(Debug)]
@@ -112,6 +114,11 @@ impl Editor {
             Request::Exit { .. } => {
                 self.exit = true;
             }
+            Request::StartLsp { id, params, .. } => {
+                let caller = Caller::new(from, id);
+                let result = self.handle_start_lsp(params);
+                self.reply(caller, result).or_fail()?;
+            }
         }
         Ok(())
     }
@@ -157,6 +164,11 @@ impl Editor {
         self.needs_redraw = true;
 
         Ok(OpenReturnValue { new })
+    }
+
+    fn handle_start_lsp(&mut self, params: StartLspParams) -> RpcResult<StartLspReturnValue> {
+        log::info!("Start LSP server: {params:?}");
+        todo!();
     }
 
     fn handle_terminal_event(&mut self, event: crossterm::event::Event) -> orfail::Result<()> {

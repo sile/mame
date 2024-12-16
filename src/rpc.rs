@@ -59,6 +59,11 @@ pub enum Request {
     Exit {
         jsonrpc: JsonRpcVersion,
     },
+    StartLsp {
+        jsonrpc: JsonRpcVersion,
+        id: RequestId,
+        params: StartLspParams,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -75,6 +80,12 @@ pub struct OpenParams {
 pub struct OpenReturnValue {
     pub new: bool,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StartLspParams {}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StartLspReturnValue {}
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum RpcError {
