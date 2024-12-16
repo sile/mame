@@ -15,6 +15,7 @@ struct Args {
 #[derive(clap::Subcommand)]
 enum Command {
     Run(RunCommand),
+    //
 }
 
 fn main() -> orfail::Result<()> {

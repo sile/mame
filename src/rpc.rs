@@ -82,7 +82,10 @@ pub struct OpenReturnValue {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StartLspParams {}
+pub struct StartLspParams {
+    pub command: PathBuf,
+    pub args: Vec<String>,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StartLspReturnValue {}
@@ -94,6 +97,10 @@ pub enum RpcError {
         kind: std::io::ErrorKind,
         reason: String,
     },
+    IoError {
+        kind: std::io::ErrorKind,
+        reason: String,
+    },
 }
 
 impl RpcError {
@@ -102,6 +109,15 @@ impl RpcError {
             path,
             kind: error.kind(),
             reason: error.to_string(),
+        }
+    }
+}
+
+impl From<std::io::Error> for RpcError {
+    fn from(value: std::io::Error) -> Self {
+        Self::IoError {
+            kind: value.kind(),
+            reason: value.to_string(),
         }
     }
 }
