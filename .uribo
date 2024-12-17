@@ -4,7 +4,7 @@
     "args": [
       "run",
       "run",
-      "src/editor.rs",
+      "../../erlang/jsone/src/jsone.erl",
       "--logfile",
       "mameda.log",
       "--loglevel",

@@ -16,6 +16,7 @@ use serde::Serialize;
 use crate::{
     buffer::{Buffer, BufferId, CursorDelta},
     input::InputThread,
+    lsp::LspClientManager,
     rpc::{
         Caller, OpenReturnValue, Request, RpcError, RpcResult, StartLspParams, StartLspReturnValue,
     },
@@ -26,6 +27,7 @@ pub struct Editor {
     poller: Poll,
     events: Events,
     rpc_server: RpcServer<Request>,
+    lsp_client_manager: LspClientManager,
     exit: bool,
     buffers: BTreeMap<BufferId, Buffer>,
     current_buffer_id: Option<BufferId>, // TODO: non optional
@@ -40,7 +42,7 @@ impl Editor {
             &mut poller,
             SocketAddr::from(([127, 0, 0, 1], port)),
             Token(0),
-            Token(usize::MAX),
+            Token(usize::MAX / 2 - 1),
         )
         .or_fail()?;
 
@@ -48,6 +50,7 @@ impl Editor {
             poller,
             events: Events::with_capacity(1024),
             rpc_server,
+            lsp_client_manager: LspClientManager::new(Token(usize::MAX / 2), Token(usize::MAX)),
             exit: false,
             buffers: BTreeMap::new(),
             current_buffer_id: None,
@@ -168,6 +171,8 @@ impl Editor {
 
     fn handle_start_lsp(&mut self, params: StartLspParams) -> RpcResult<StartLspReturnValue> {
         log::info!("Start LSP server: {params:?}");
+        let client = self.lsp_client_manager.start(&mut self.poller, &params)?;
+        //LspClient::start();
         todo!();
     }
 

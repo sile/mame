@@ -8,7 +8,7 @@ use simplelog::{ConfigBuilder, WriteLogger};
 
 use crate::{
     editor::Editor,
-    rpc::{self, OpenParams, Request},
+    rpc::{self, OpenParams, Request, StartLspParams},
 };
 
 #[derive(Debug, Clone, Args)]
@@ -20,6 +20,7 @@ pub struct RunCommand {
 
     #[clap(long, default_value_t=LevelFilter::Info)]
     pub loglevel: LevelFilter,
+    // TODO
 }
 
 impl RunCommand {
@@ -49,6 +50,24 @@ impl RunCommand {
                     jsonrpc: jsonlrpc::JsonRpcVersion::V2,
                     id: RequestId::Number(0),
                     params: OpenParams { path },
+                };
+                if rpc::call::<serde_json::Value>(addr, &request).is_err() {
+                    // TODO: show error message
+                    let request = Request::Exit {
+                        jsonrpc: jsonlrpc::JsonRpcVersion::V2,
+                    };
+                    let _ = rpc::cast(addr, &request);
+                }
+
+                // TODO
+                let request = Request::StartLsp {
+                    jsonrpc: jsonlrpc::JsonRpcVersion::V2,
+                    id: RequestId::Number(1),
+                    params: StartLspParams {
+                        name: "erlls".to_owned(),
+                        command: PathBuf::from("erlls"),
+                        args: Vec::new(),
+                    },
                 };
                 if rpc::call::<serde_json::Value>(addr, &request).is_err() {
                     // TODO: show error message
