@@ -171,9 +171,8 @@ impl Editor {
 
     fn handle_start_lsp(&mut self, params: StartLspParams) -> RpcResult<StartLspReturnValue> {
         log::info!("Start LSP server: {params:?}");
-        let client = self.lsp_client_manager.start(&mut self.poller, &params)?;
-        //LspClient::start();
-        todo!();
+        self.lsp_client_manager.start(&mut self.poller, &params)?;
+        Ok(StartLspReturnValue {})
     }
 
     fn handle_terminal_event(&mut self, event: crossterm::event::Event) -> orfail::Result<()> {
