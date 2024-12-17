@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
     os::fd::AsRawFd,
-    process::{Child, Command},
+    process::{Child, Command, Stdio},
 };
 
 use mio::{unix::SourceFd, Interest, Poll, Token};
@@ -28,11 +28,7 @@ impl LspClientManager {
         }
     }
 
-    pub fn start(
-        &mut self,
-        poller: &mut Poll,
-        params: &StartLspParams,
-    ) -> Result<&mut LspClient, RpcError> {
+    pub fn start(&mut self, poller: &mut Poll, params: &StartLspParams) -> Result<(), RpcError> {
         if self.clients.contains_key(&params.name) {
             return Err(RpcError::other("LSP server name conflicts"));
         }
@@ -42,14 +38,17 @@ impl LspClientManager {
         let stderr_token = Token(self.next_token.0 + 2);
         self.next_token = Token(self.next_token.0 + 3); // TODO: wrapping handling
 
-        let client = LspClient::start(poller, stdin_token, stdout_token, stderr_token, params)?;
-        self.clients.insert(params.name.clone(), client);
-
         for token in [stdin_token, stdout_token, stderr_token] {
             self.token_to_client_id.insert(token, params.name.clone());
         }
 
-        Ok(self.clients.get_mut(&params.name).expect("unreachable"))
+        let client = LspClient::start(poller, stdin_token, stdout_token, stderr_token, params)?;
+
+        // TODO: initialize
+
+        self.clients.insert(params.name.clone(), client);
+
+        Ok(())
     }
 }
 
@@ -69,7 +68,12 @@ impl LspClient {
         stderr_token: Token,
         params: &StartLspParams,
     ) -> Result<Self, RpcError> {
-        let lsp_server = Command::new(&params.command).args(&params.args).spawn()?;
+        let lsp_server = Command::new(&params.command)
+            .args(&params.args)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()?;
         log::info!("Started LSP server: {}", params.command.display());
 
         for (fd, token) in [

@@ -76,6 +76,8 @@ impl RunCommand {
                     };
                     let _ = rpc::cast(addr, &request);
                 }
+
+                log::info!("Initialized");
             });
         }
 
