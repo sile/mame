@@ -78,6 +78,9 @@ impl Editor {
                 self.rpc_server
                     .handle_event(&mut self.poller, event)
                     .or_fail()?;
+                self.lsp_client_manager
+                    .handle_event(&mut self.poller, event)
+                    .or_fail()?;
             }
             while let Some((from, request)) = self.rpc_server.try_recv() {
                 self.handle_request(from, request).or_fail()?;

@@ -4,7 +4,8 @@ use std::{
     process::{Child, Command, Stdio},
 };
 
-use mio::{unix::SourceFd, Interest, Poll, Token};
+use mio::{event::Event, unix::SourceFd, Interest, Poll, Token};
+use orfail::OrFail;
 
 use crate::rpc::{RpcError, StartLspParams};
 
@@ -43,11 +44,22 @@ impl LspClientManager {
         }
 
         let client = LspClient::start(poller, stdin_token, stdout_token, stderr_token, params)?;
-
-        // TODO: initialize
-
         self.clients.insert(params.name.clone(), client);
 
+        Ok(())
+    }
+
+    pub fn handle_event(&mut self, poller: &mut Poll, event: &Event) -> orfail::Result<()> {
+        let Some(id) = self.token_to_client_id.get(&event.token()) else {
+            return Ok(());
+        };
+        let client = self.clients.get_mut(id).expect("infallible");
+        if !client.handle_event(poller, event).or_fail()? {
+            let client = self.clients.remove(id).expect("infallible");
+            self.token_to_client_id.remove(&client.stdin_token);
+            self.token_to_client_id.remove(&client.stdout_token);
+            self.token_to_client_id.remove(&client.stderr_token);
+        }
         Ok(())
     }
 }
@@ -99,6 +111,8 @@ impl LspClient {
                 .expect("TODO");
         }
 
+        // TODO: initialize
+
         Ok(Self {
             lsp_server,
             stdin_token,
@@ -107,21 +121,24 @@ impl LspClient {
         })
     }
 
-    pub fn stop(mut self, poller: &mut Poll) {
-        log::info!("Stops LSP server");
+    fn handle_event(&mut self, poller: &mut Poll, event: &Event) -> orfail::Result<bool> {
+        if let Some(status) = self.lsp_server.try_wait().or_fail()? {
+            log::info!("LSP server exited: {status}");
 
-        for fd in [
-            self.lsp_server.stdin.as_ref().map(|t| t.as_raw_fd()),
-            self.lsp_server.stdout.as_ref().map(|t| t.as_raw_fd()),
-            self.lsp_server.stderr.as_ref().map(|t| t.as_raw_fd()),
-        ]
-        .into_iter()
-        .filter_map(|t| t)
-        {
-            let _ = poller.registry().deregister(&mut SourceFd(&fd));
+            for fd in [
+                self.lsp_server.stdin.as_ref().map(|t| t.as_raw_fd()),
+                self.lsp_server.stdout.as_ref().map(|t| t.as_raw_fd()),
+                self.lsp_server.stderr.as_ref().map(|t| t.as_raw_fd()),
+            ]
+            .into_iter()
+            .filter_map(|t| t)
+            {
+                let _ = poller.registry().deregister(&mut SourceFd(&fd));
+            }
+
+            return Ok(false);
         }
 
-        // TODO: Send SIGTERM before SIGKILL
-        let _ = self.lsp_server.kill();
+        todo!()
     }
 }
