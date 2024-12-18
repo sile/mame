@@ -1,11 +1,12 @@
 use std::{
     collections::HashMap,
     os::fd::AsRawFd,
-    process::{Child, Command, Stdio},
+    process::{Child, ChildStderr, ChildStdin, ChildStdout, Command, Stdio},
 };
 
 use mio::{event::Event, unix::SourceFd, Interest, Poll, Token};
 use orfail::OrFail;
+use serde::Serialize;
 
 use crate::rpc::{RpcError, StartLspParams};
 
@@ -64,12 +65,18 @@ impl LspClientManager {
     }
 }
 
+const SEND_BUF_SIZE_LIMIT: usize = 1024 * 10;
+
 #[derive(Debug)]
 pub struct LspClient {
     lsp_server: Child,
+    stdin: ChildStdin,
+    stdout: ChildStdout,
+    stderr: ChildStderr,
     stdin_token: Token,
     stdout_token: Token,
     stderr_token: Token,
+    send_buf: Vec<u8>,
 }
 
 impl LspClient {
@@ -80,7 +87,7 @@ impl LspClient {
         stderr_token: Token,
         params: &StartLspParams,
     ) -> Result<Self, RpcError> {
-        let lsp_server = Command::new(&params.command)
+        let mut lsp_server = Command::new(&params.command)
             .args(&params.args)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
@@ -88,23 +95,15 @@ impl LspClient {
             .spawn()?;
         log::info!("Started LSP server: {}", params.command.display());
 
+        let stdin = lsp_server.stdin.take().expect("infallible");
+        let stdout = lsp_server.stdout.take().expect("infallible");
+        let stderr = lsp_server.stderr.take().expect("infallible");
+
         for (fd, token) in [
-            lsp_server
-                .stdin
-                .as_ref()
-                .map(|t| (t.as_raw_fd(), stdin_token)),
-            lsp_server
-                .stdout
-                .as_ref()
-                .map(|t| (t.as_raw_fd(), stdout_token)),
-            lsp_server
-                .stderr
-                .as_ref()
-                .map(|t| (t.as_raw_fd(), stderr_token)),
-        ]
-        .into_iter()
-        .filter_map(|t| t)
-        {
+            (stdin.as_raw_fd(), stdin_token),
+            (stdout.as_raw_fd(), stdout_token),
+            (stderr.as_raw_fd(), stderr_token),
+        ] {
             poller
                 .registry()
                 .register(&mut SourceFd(&fd), token, Interest::READABLE)
@@ -118,7 +117,28 @@ impl LspClient {
             stdin_token,
             stdout_token,
             stderr_token,
+            stdin,
+            stdout,
+            stderr,
+            send_buf: Vec::new(),
         })
+    }
+
+    fn send<T: Serialize>(&mut self, poller: &mut Poll, request: &T) -> orfail::Result<()> {
+        if self.send_buf.len() > SEND_BUF_SIZE_LIMIT {
+            log::warn!("Exceeded send buffer (drop a LSP request)");
+            return Ok(());
+        }
+
+        let is_first = self.send_buf.is_empty();
+        serde_json::to_writer(&mut self.send_buf, request).or_fail()?;
+        self.send_buf.push(b'\n');
+
+        self.flush(poller, is_first).or_fail()
+    }
+
+    fn flush(&mut self, poller: &mut Poll, is_first: bool) -> orfail::Result<()> {
+        todo!()
     }
 
     fn handle_event(&mut self, poller: &mut Poll, event: &Event) -> orfail::Result<bool> {
@@ -126,17 +146,18 @@ impl LspClient {
             log::info!("LSP server exited: {status}");
 
             for fd in [
-                self.lsp_server.stdin.as_ref().map(|t| t.as_raw_fd()),
-                self.lsp_server.stdout.as_ref().map(|t| t.as_raw_fd()),
-                self.lsp_server.stderr.as_ref().map(|t| t.as_raw_fd()),
-            ]
-            .into_iter()
-            .filter_map(|t| t)
-            {
+                self.stdin.as_raw_fd(),
+                self.stdout.as_raw_fd(),
+                self.stderr.as_raw_fd(),
+            ] {
                 let _ = poller.registry().deregister(&mut SourceFd(&fd));
             }
 
             return Ok(false);
+        }
+
+        if event.is_writable() {
+            self.flush(poller, false).or_fail()?;
         }
 
         todo!()
