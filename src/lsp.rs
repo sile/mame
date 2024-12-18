@@ -1,5 +1,6 @@
 use std::{
     collections::HashMap,
+    io::Write,
     os::fd::AsRawFd,
     process::{Child, ChildStderr, ChildStdin, ChildStdout, Command, Stdio},
 };
@@ -78,6 +79,7 @@ pub struct LspClient {
     stdout_token: Token,
     stderr_token: Token,
     send_buf: Vec<u8>,
+    send_buf_offset: usize,
     next_request_id: i64,
     ongoing_requests: HashMap<i64, &'static str>,
 }
@@ -124,6 +126,7 @@ impl LspClient {
             stdout,
             stderr,
             send_buf: Vec::new(),
+            send_buf_offset: 0,
             next_request_id: 0,
             ongoing_requests: HashMap::new(),
         })
@@ -163,15 +166,45 @@ impl LspClient {
             params,
         };
 
+        let content = serde_json::to_vec(&request).or_fail()?;
         let is_first = self.send_buf.is_empty();
-        serde_json::to_writer(&mut self.send_buf, &request).or_fail()?;
-        self.send_buf.push(b'\n');
+        self.send_buf.extend_from_slice(b"Content-Length:");
+        self.send_buf
+            .extend_from_slice(content.len().to_string().as_bytes());
+        self.send_buf.extend_from_slice(b"\r\n\r\n");
+        self.send_buf.extend_from_slice(&content);
 
         self.flush(poller, is_first).or_fail()
     }
 
     fn flush(&mut self, poller: &mut Poll, is_first: bool) -> orfail::Result<()> {
-        todo!()
+        while self.send_buf_offset < self.send_buf.len() {
+            match self.stdin.write(&self.send_buf[self.send_buf_offset..]) {
+                Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                    if is_first {
+                        poller
+                            .registry()
+                            .reregister(
+                                &mut SourceFd(&self.stdin.as_raw_fd()),
+                                self.stdin_token,
+                                Interest::READABLE | Interest::WRITABLE,
+                            )
+                            .or_fail()?;
+                    }
+                    return Ok(());
+                }
+                Err(e) => {
+                    log::error!("Failed to write a LSP request: {e}");
+                    return Err(e).or_fail();
+                }
+                Ok(size) => {
+                    self.send_buf_offset += size;
+                }
+            }
+        }
+        self.send_buf.clear();
+        self.send_buf_offset = 0;
+        Ok(())
     }
 
     fn handle_event(&mut self, poller: &mut Poll, event: &Event) -> orfail::Result<bool> {
@@ -190,7 +223,10 @@ impl LspClient {
         }
 
         if event.is_writable() {
-            self.flush(poller, false).or_fail()?;
+            if self.flush(poller, false).is_err() {
+                let _ = self.lsp_server.kill();
+                return Ok(false);
+            }
         }
 
         todo!()
