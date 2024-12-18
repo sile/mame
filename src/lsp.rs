@@ -4,6 +4,7 @@ use std::{
     process::{Child, ChildStderr, ChildStdin, ChildStdout, Command, Stdio},
 };
 
+use jsonlrpc::JsonRpcVersion;
 use mio::{event::Event, unix::SourceFd, Interest, Poll, Token};
 use orfail::OrFail;
 use serde::Serialize;
@@ -77,6 +78,8 @@ pub struct LspClient {
     stdout_token: Token,
     stderr_token: Token,
     send_buf: Vec<u8>,
+    next_request_id: i64,
+    ongoing_requests: HashMap<i64, &'static str>,
 }
 
 impl LspClient {
@@ -121,17 +124,47 @@ impl LspClient {
             stdout,
             stderr,
             send_buf: Vec::new(),
+            next_request_id: 0,
+            ongoing_requests: HashMap::new(),
         })
     }
 
-    fn send<T: Serialize>(&mut self, poller: &mut Poll, request: &T) -> orfail::Result<()> {
+    fn send<T: Serialize>(
+        &mut self,
+        poller: &mut Poll,
+        method: &'static str,
+        is_notification: bool,
+        params: &T,
+    ) -> orfail::Result<()> {
         if self.send_buf.len() > SEND_BUF_SIZE_LIMIT {
-            log::warn!("Exceeded send buffer (drop a LSP request)");
+            log::warn!("Exceeded send buffer limit (drop a LSP request)");
             return Ok(());
         }
 
+        #[derive(Serialize)]
+        struct Request<'a, T> {
+            jsonrpc: JsonRpcVersion,
+            method: &'static str,
+            id: Option<i64>,
+            params: &'a T,
+        }
+
+        let request = Request {
+            jsonrpc: JsonRpcVersion::V2,
+            method,
+            id: if is_notification {
+                None
+            } else {
+                let id = self.next_request_id;
+                self.ongoing_requests.insert(id, method);
+                self.next_request_id += 1;
+                Some(id)
+            },
+            params,
+        };
+
         let is_first = self.send_buf.is_empty();
-        serde_json::to_writer(&mut self.send_buf, request).or_fail()?;
+        serde_json::to_writer(&mut self.send_buf, &request).or_fail()?;
         self.send_buf.push(b'\n');
 
         self.flush(poller, is_first).or_fail()
