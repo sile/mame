@@ -246,7 +246,7 @@ impl LspClient {
         }
 
         if event.is_writable() {
-            if let Err(e) = self.flush(poller, false) {
+            if let Err(e) = self.flush(poller, false).or_fail() {
                 log::error!("LSP server error: {e})");
                 let _ = self.lsp_server.kill();
                 return Ok(false);
@@ -255,7 +255,7 @@ impl LspClient {
 
         if event.is_readable() {
             if event.token() == self.stdout_token {
-                if let Err(e) = self.read_response() {
+                if let Err(e) = self.read_response().or_fail() {
                     log::error!("LSP server error: {e})");
                     let _ = self.lsp_server.kill();
                     return Ok(false);
@@ -265,9 +265,21 @@ impl LspClient {
             } else {
                 unreachable!()
             }
+
+            for response in std::mem::take(&mut self.responses) {
+                if let Err(e) = self.handle_response(response).or_fail() {
+                    log::error!("LSP server error: {e})");
+                    let _ = self.lsp_server.kill();
+                    return Ok(false);
+                }
+            }
         }
 
         Ok(true)
+    }
+
+    fn handle_response(&mut self, response: ResponseObject) -> orfail::Result<()> {
+        todo!()
     }
 
     fn read_response(&mut self) -> orfail::Result<()> {
@@ -302,6 +314,7 @@ impl LspClient {
 
                 let content = &self.recv_buf[offset..][..content_len];
                 let response: ResponseObject = serde_json::from_slice(content).or_fail()?;
+                log::debug!("LSP response: {response:?}");
                 self.responses.push(response);
 
                 self.recv_buf.drain(..offset + content_len);
@@ -338,7 +351,11 @@ impl InitializeParams {
 
     pub fn new(root_dir: &PathBuf) -> Self {
         let capabilities = ClientCapabilities {
-            workspace: WorkspaceCapabilitylies::default(),
+            workspace: WorkspaceCapabilitylies {
+                workspace_edit: WorkspaceEditClientCapabilities {
+                    document_changes: true,
+                },
+            },
             general: GeneralClientCapabilities {
                 position_encodings: vec![PositionEncodingKind::Utf8],
             },

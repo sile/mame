@@ -65,7 +65,7 @@ impl RunCommand {
                     id: RequestId::Number(1),
                     params: StartLspParams {
                         name: "erlls".to_owned(),
-                        root_dir: PathBuf::from("~/dev/erlang/jsone/"),
+                        root_dir: PathBuf::from("file:///../../erlang/jsone/"),
                         command: PathBuf::from("erlls"),
                         args: Vec::new(),
                     },
