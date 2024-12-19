@@ -6,7 +6,7 @@ use std::{
     process::{Child, ChildStderr, ChildStdin, ChildStdout, Command, Stdio},
 };
 
-use jsonlrpc::{JsonRpcVersion, ResponseObject};
+use jsonlrpc::{JsonRpcVersion, RequestId, ResponseObject};
 use mio::{event::Event, unix::SourceFd, Interest, Poll, Token};
 use orfail::OrFail;
 use serde::Serialize;
@@ -92,7 +92,7 @@ pub struct LspClient {
     recv_buf: Vec<u8>,
     recv_buf_offset: usize,
     next_request_id: i64,
-    ongoing_requests: HashMap<i64, &'static str>,
+    ongoing_requests: HashMap<RequestId, &'static str>,
     responses: Vec<ResponseObject>,
 }
 
@@ -181,7 +181,7 @@ impl LspClient {
                 None
             } else {
                 let id = self.next_request_id;
-                self.ongoing_requests.insert(id, method);
+                self.ongoing_requests.insert(RequestId::Number(id), method);
                 self.next_request_id += 1;
                 Some(id)
             },
@@ -279,7 +279,16 @@ impl LspClient {
     }
 
     fn handle_response(&mut self, response: ResponseObject) -> orfail::Result<()> {
-        todo!()
+        let id = response.id().or_fail()?;
+        let method = self.ongoing_requests.remove(id).or_fail()?;
+        match method {
+            "initialize" => {
+                todo!();
+            }
+            _ => Err(orfail::Failure::new(format!(
+                "Unknown LSP response: {id:?}"
+            ))),
+        }
     }
 
     fn read_response(&mut self) -> orfail::Result<()> {
