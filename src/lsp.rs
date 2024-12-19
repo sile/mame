@@ -89,6 +89,7 @@ pub struct LspClient {
     stderr_token: Token,
     send_buf: Vec<u8>,
     send_buf_offset: usize,
+    recv_buf: Vec<u8>,
     next_request_id: i64,
     ongoing_requests: HashMap<i64, &'static str>,
 }
@@ -134,6 +135,7 @@ impl LspClient {
             stderr,
             send_buf: Vec::new(),
             send_buf_offset: 0,
+            recv_buf: Vec::new(),
             next_request_id: 0,
             ongoing_requests: HashMap::new(),
         };
@@ -246,6 +248,23 @@ impl LspClient {
             }
         }
 
+        if event.is_readable() {
+            if event.token() == self.stdout_token {
+                if self.read_response().is_err() {
+                    let _ = self.lsp_server.kill();
+                    return Ok(false);
+                }
+            } else if event.token() == self.stderr_token {
+                todo!()
+            } else {
+                unreachable!()
+            }
+        }
+
+        Ok(true)
+    }
+
+    fn read_response(&mut self) -> orfail::Result<()> {
         todo!()
     }
 }
