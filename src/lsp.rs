@@ -1,12 +1,12 @@
 use std::{
     collections::HashMap,
-    io::Write,
+    io::{Read, Write},
     os::fd::AsRawFd,
     path::PathBuf,
     process::{Child, ChildStderr, ChildStdin, ChildStdout, Command, Stdio},
 };
 
-use jsonlrpc::JsonRpcVersion;
+use jsonlrpc::{JsonRpcVersion, ResponseObject};
 use mio::{event::Event, unix::SourceFd, Interest, Poll, Token};
 use orfail::OrFail;
 use serde::Serialize;
@@ -90,8 +90,10 @@ pub struct LspClient {
     send_buf: Vec<u8>,
     send_buf_offset: usize,
     recv_buf: Vec<u8>,
+    recv_buf_offset: usize,
     next_request_id: i64,
     ongoing_requests: HashMap<i64, &'static str>,
+    responses: Vec<ResponseObject>,
 }
 
 impl LspClient {
@@ -135,9 +137,11 @@ impl LspClient {
             stderr,
             send_buf: Vec::new(),
             send_buf_offset: 0,
-            recv_buf: Vec::new(),
+            recv_buf: vec![0; 4096],
+            recv_buf_offset: 0,
             next_request_id: 0,
             ongoing_requests: HashMap::new(),
+            responses: Vec::new(),
         };
         this.send(
             poller,
@@ -242,7 +246,8 @@ impl LspClient {
         }
 
         if event.is_writable() {
-            if self.flush(poller, false).is_err() {
+            if let Err(e) = self.flush(poller, false) {
+                log::error!("LSP server error: {e})");
                 let _ = self.lsp_server.kill();
                 return Ok(false);
             }
@@ -250,7 +255,8 @@ impl LspClient {
 
         if event.is_readable() {
             if event.token() == self.stdout_token {
-                if self.read_response().is_err() {
+                if let Err(e) = self.read_response() {
+                    log::error!("LSP server error: {e})");
                     let _ = self.lsp_server.kill();
                     return Ok(false);
                 }
@@ -265,7 +271,54 @@ impl LspClient {
     }
 
     fn read_response(&mut self) -> orfail::Result<()> {
-        todo!()
+        if self.recv_buf.len() == self.recv_buf_offset {
+            self.recv_buf.resize(self.recv_buf_offset * 2, 0);
+        }
+
+        match self.stdout.read(&mut self.recv_buf[self.recv_buf_offset..]) {
+            Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                return Ok(());
+            }
+            Err(e) => {
+                return Err(e).or_fail();
+            }
+            Ok(size) => {
+                self.recv_buf_offset += size;
+            }
+        }
+
+        let mut content_len = None;
+        let mut offset = 0;
+        while let Some(line_end) = self.recv_buf[offset..self.recv_buf_offset]
+            .windows(2)
+            .position(|b| b == b"\r\n")
+        {
+            if line_end == 0 {
+                let content_len = content_len.or_fail()?;
+                offset += 2;
+                if self.recv_buf[offset..self.recv_buf_offset].len() < content_len {
+                    return Ok(());
+                }
+
+                let content = &self.recv_buf[offset..][..content_len];
+                let response: ResponseObject = serde_json::from_slice(content).or_fail()?;
+                self.responses.push(response);
+
+                self.recv_buf.drain(..offset + content_len);
+                self.recv_buf_offset -= offset + content_len;
+                offset = 0;
+                continue;
+            }
+
+            let key = "content-length:";
+            let line = std::str::from_utf8(&self.recv_buf[offset..][..line_end]).or_fail()?;
+            if line.len() > key.len() && line[..key.len()].eq_ignore_ascii_case(key) {
+                content_len = Some(line[key.len()..].trim().parse::<usize>().or_fail()?);
+            }
+            offset += line_end + 2;
+        }
+
+        Ok(())
     }
 }
 
