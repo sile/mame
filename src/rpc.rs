@@ -84,6 +84,7 @@ pub struct OpenReturnValue {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StartLspParams {
     pub name: String,
+    pub root_dir: PathBuf,
     pub command: PathBuf,
     pub args: Vec<String>,
 }

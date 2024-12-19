@@ -2,6 +2,7 @@ use std::{
     collections::HashMap,
     io::Write,
     os::fd::AsRawFd,
+    path::PathBuf,
     process::{Child, ChildStderr, ChildStdin, ChildStdout, Command, Stdio},
 };
 
@@ -32,15 +33,23 @@ impl LspClientManager {
         }
     }
 
+    fn next_token(&mut self) -> Token {
+        let token = self.next_token;
+        self.next_token.0 += 1;
+        if self.next_token == self.max_token {
+            self.next_token = self.min_token;
+        }
+        token
+    }
+
     pub fn start(&mut self, poller: &mut Poll, params: &StartLspParams) -> Result<(), RpcError> {
         if self.clients.contains_key(&params.name) {
             return Err(RpcError::other("LSP server name conflicts"));
         }
 
-        let stdin_token = Token(self.next_token.0);
-        let stdout_token = Token(self.next_token.0 + 1);
-        let stderr_token = Token(self.next_token.0 + 2);
-        self.next_token = Token(self.next_token.0 + 3); // TODO: wrapping handling
+        let stdin_token = self.next_token();
+        let stdout_token = self.next_token();
+        let stderr_token = self.next_token();
 
         for token in [stdin_token, stdout_token, stderr_token] {
             self.token_to_client_id.insert(token, params.name.clone());
@@ -115,9 +124,7 @@ impl LspClient {
                 .expect("TODO");
         }
 
-        // TODO: initialize
-
-        Ok(Self {
+        let mut this = Self {
             lsp_server,
             stdin_token,
             stdout_token,
@@ -129,7 +136,16 @@ impl LspClient {
             send_buf_offset: 0,
             next_request_id: 0,
             ongoing_requests: HashMap::new(),
-        })
+        };
+        this.send(
+            poller,
+            InitializeParams::METHOD,
+            false,
+            &InitializeParams::new(&params.root_dir),
+        )
+        .or_fail()
+        .map_err(|e| RpcError::other(&e.to_string()))?;
+        Ok(this)
     }
 
     fn send<T: Serialize>(
@@ -208,6 +224,7 @@ impl LspClient {
     }
 
     fn handle_event(&mut self, poller: &mut Poll, event: &Event) -> orfail::Result<bool> {
+        // TODO: log::info!("LSP I/O event: {event:?}");
         if let Some(status) = self.lsp_server.try_wait().or_fail()? {
             log::info!("LSP server exited: {status}");
 
@@ -231,4 +248,87 @@ impl LspClient {
 
         todo!()
     }
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InitializeParams {
+    #[serde(default)]
+    pub root_uri: Option<PathBuf>,
+    pub client_info: Option<ClientInfo>,
+    pub capabilities: ClientCapabilities,
+    #[serde(default)]
+    pub workspace_folders: Vec<WorkspaceFolder>,
+}
+
+impl InitializeParams {
+    pub const METHOD: &'static str = "initialize";
+
+    pub fn new(root_dir: &PathBuf) -> Self {
+        let capabilities = ClientCapabilities {
+            workspace: WorkspaceCapabilitylies::default(),
+            general: GeneralClientCapabilities {
+                position_encodings: vec![PositionEncodingKind::Utf8],
+            },
+        };
+        Self {
+            root_uri: Some(root_dir.clone()),
+            client_info: None, // TODO
+            capabilities,
+            workspace_folders: vec![],
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ClientInfo {
+    pub name: String,
+    pub version: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ClientCapabilities {
+    #[serde(default)]
+    pub workspace: WorkspaceCapabilitylies,
+    pub general: GeneralClientCapabilities,
+}
+
+#[derive(Debug, Default, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GeneralClientCapabilities {
+    #[serde(default)]
+    pub position_encodings: Vec<PositionEncodingKind>,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+pub enum PositionEncodingKind {
+    #[serde(rename = "utf-8")]
+    Utf8,
+    #[default]
+    #[serde(rename = "utf-16")]
+    Utf16,
+    #[serde(rename = "utf-32")]
+    Utf32,
+}
+
+#[derive(Debug, Default, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkspaceCapabilitylies {
+    #[serde(default)]
+    pub workspace_edit: WorkspaceEditClientCapabilities,
+}
+
+#[derive(Debug, Default, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkspaceEditClientCapabilities {
+    #[serde(default)]
+    pub document_changes: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkspaceFolder {
+    pub uri: PathBuf,
+    pub name: String,
 }
