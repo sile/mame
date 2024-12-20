@@ -18,7 +18,8 @@ use crate::{
     input::InputThread,
     lsp::LspClientManager,
     rpc::{
-        Caller, OpenReturnValue, Request, RpcError, RpcResult, StartLspParams, StartLspReturnValue,
+        Caller, NotifyLspStartedParams, OpenReturnValue, Request, RpcError, RpcResult,
+        StartLspParams, StartLspReturnValue,
     },
 };
 
@@ -46,11 +47,16 @@ impl Editor {
         )
         .or_fail()?;
 
+        let addr = rpc_server.listen_addr();
         Ok(Self {
             poller,
             events: Events::with_capacity(1024),
             rpc_server,
-            lsp_client_manager: LspClientManager::new(Token(usize::MAX / 2), Token(usize::MAX)),
+            lsp_client_manager: LspClientManager::new(
+                addr,
+                Token(usize::MAX / 2),
+                Token(usize::MAX),
+            ),
             exit: false,
             buffers: BTreeMap::new(),
             current_buffer_id: None,
@@ -108,6 +114,7 @@ impl Editor {
     }
 
     fn handle_request(&mut self, from: ClientId, request: Request) -> orfail::Result<()> {
+        log::debug!("Request: {request:?}");
         match request {
             Request::NotifyTerminalEvent { params, .. } => {
                 self.handle_terminal_event(params.event).or_fail()?;
@@ -125,7 +132,20 @@ impl Editor {
                 let result = self.handle_start_lsp(params);
                 self.reply(caller, result).or_fail()?;
             }
+            Request::NotifyLspStarted { params, .. } => {
+                self.handle_notify_lsp_started(params).or_fail()?;
+            }
         }
+        Ok(())
+    }
+
+    fn handle_notify_lsp_started(&mut self, _params: NotifyLspStartedParams) -> orfail::Result<()> {
+        // TODO: check name
+
+        // TODO: did open
+
+        // TODO: semantic tokens
+
         Ok(())
     }
 

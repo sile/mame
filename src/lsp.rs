@@ -1,6 +1,7 @@
 use std::{
     collections::HashMap,
     io::{Read, Write},
+    net::SocketAddr,
     os::fd::AsRawFd,
     path::PathBuf,
     process::{Child, ChildStderr, ChildStdin, ChildStdout, Command, Stdio},
@@ -11,10 +12,11 @@ use mio::{event::Event, unix::SourceFd, Interest, Poll, Token};
 use orfail::OrFail;
 use serde::Serialize;
 
-use crate::rpc::{RpcError, StartLspParams};
+use crate::rpc::{self, RpcError, StartLspParams};
 
 #[derive(Debug)]
 pub struct LspClientManager {
+    editor: SocketAddr,
     min_token: Token,
     max_token: Token,
     next_token: Token,
@@ -23,8 +25,9 @@ pub struct LspClientManager {
 }
 
 impl LspClientManager {
-    pub fn new(min_token: Token, max_token: Token) -> Self {
+    pub fn new(editor: SocketAddr, min_token: Token, max_token: Token) -> Self {
         Self {
+            editor,
             min_token,
             max_token,
             next_token: min_token,
@@ -55,7 +58,15 @@ impl LspClientManager {
             self.token_to_client_id.insert(token, params.name.clone());
         }
 
-        let client = LspClient::start(poller, stdin_token, stdout_token, stderr_token, params)?;
+        let client = LspClient::start(
+            self.editor,
+            params.name.clone(),
+            poller,
+            stdin_token,
+            stdout_token,
+            stderr_token,
+            params,
+        )?;
         self.clients.insert(params.name.clone(), client);
 
         Ok(())
@@ -80,7 +91,9 @@ const SEND_BUF_SIZE_LIMIT: usize = 1024 * 10;
 
 #[derive(Debug)]
 pub struct LspClient {
+    editor: SocketAddr,
     lsp_server: Child,
+    name: String,
     stdin: ChildStdin,
     stdout: ChildStdout,
     stderr: ChildStderr,
@@ -98,6 +111,8 @@ pub struct LspClient {
 
 impl LspClient {
     pub fn start(
+        editor: SocketAddr,
+        name: String,
         poller: &mut Poll,
         stdin_token: Token,
         stdout_token: Token,
@@ -130,6 +145,8 @@ impl LspClient {
         }
 
         let mut this = Self {
+            editor,
+            name,
             lsp_server,
             stdin_token,
             stdout_token,
@@ -296,7 +313,9 @@ impl LspClient {
                     return Err(e).or_fail();
                 }
                 Ok(size) => {
-                    log::debug!("[LSP STDERR] {}", String::from_utf8_lossy(&buf[..size]));
+                    for line in String::from_utf8_lossy(&buf[..size]).lines() {
+                        log::debug!("[LSP STDERR] {line}");
+                    }
                 }
             }
         }
@@ -325,8 +344,31 @@ impl LspClient {
     ) -> orfail::Result<()> {
         // TODO: Handle _response
         log::debug!("LSP initialize response: {response:?}");
+
         self.send(poller, "initialized", true, &serde_json::Value::Null)
             .or_fail()?;
+
+        rpc::cast(
+            self.editor,
+            &rpc::Request::NotifyLspStarted {
+                jsonrpc: JsonRpcVersion::V2,
+                params: rpc::NotifyLspStartedParams {
+                    name: self.name.clone(),
+                },
+            },
+        )
+        .or_fail()?;
+
+        Ok(())
+    }
+
+    pub fn notify_did_open(&mut self, poller: &mut Poll) -> orfail::Result<()> {
+        // TODO
+        Ok(())
+    }
+
+    pub fn request_semantic_tokens_full(&mut self, poller: &mut Poll) -> orfail::Result<()> {
+        // TODO
         Ok(())
     }
 

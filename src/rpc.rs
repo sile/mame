@@ -65,6 +65,12 @@ pub enum Request {
         id: RequestId,
         params: StartLspParams,
     },
+
+    // Internal
+    NotifyLspStarted {
+        jsonrpc: JsonRpcVersion,
+        params: NotifyLspStartedParams,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -94,6 +100,11 @@ pub struct StartLspParams {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StartLspReturnValue {}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NotifyLspStartedParams {
+    pub name: String,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum RpcError {
