@@ -27,6 +27,7 @@ pub struct Buffer {
     pub lines: Vec<String>,
     pub start_line: usize,
     pub cursor: Cursor,
+    pub lsp_server_name: Option<String>,
 }
 
 impl Buffer {
@@ -37,6 +38,7 @@ impl Buffer {
             lines: Vec::new(),
             start_line: 0,
             cursor: Cursor::default(),
+            lsp_server_name: None,
         })
     }
 
@@ -49,6 +51,7 @@ impl Buffer {
             lines: content.lines().map(|l| l.to_owned()).collect(),
             start_line: 0,
             cursor: Cursor::default(),
+            lsp_server_name: None,
         })
     }
 

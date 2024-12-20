@@ -139,10 +139,19 @@ impl Editor {
         Ok(())
     }
 
-    fn handle_notify_lsp_started(&mut self, _params: NotifyLspStartedParams) -> orfail::Result<()> {
+    fn handle_notify_lsp_started(&mut self, params: NotifyLspStartedParams) -> orfail::Result<()> {
         // TODO: check name
+        for buffer in self.buffers.values_mut() {
+            buffer.lsp_server_name = Some(params.name.clone());
+        }
 
-        // TODO: did open
+        for buffer in self.buffers.values() {
+            // self.notify_did_open(buffer).or_fail()?;
+            let Some(lsp) = self.lsp_client_manager.clients.get_mut(&params.name) else {
+                continue;
+            };
+            lsp.notify_did_open(&mut self.poller, buffer).or_fail()?;
+        }
 
         // TODO: semantic tokens
 

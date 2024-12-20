@@ -12,7 +12,10 @@ use mio::{event::Event, unix::SourceFd, Interest, Poll, Token};
 use orfail::OrFail;
 use serde::Serialize;
 
-use crate::rpc::{self, RpcError, StartLspParams};
+use crate::{
+    buffer::Buffer,
+    rpc::{self, RpcError, StartLspParams},
+};
 
 #[derive(Debug)]
 pub struct LspClientManager {
@@ -20,7 +23,7 @@ pub struct LspClientManager {
     min_token: Token,
     max_token: Token,
     next_token: Token,
-    clients: HashMap<String, LspClient>,
+    pub clients: HashMap<String, LspClient>, // TODO: priv
     token_to_client_id: HashMap<Token, String>,
 }
 
@@ -362,14 +365,12 @@ impl LspClient {
         Ok(())
     }
 
-    pub fn notify_did_open(&mut self, poller: &mut Poll) -> orfail::Result<()> {
-        // TODO
-        Ok(())
+    pub fn notify_did_open(&mut self, poller: &mut Poll, buffer: &Buffer) -> orfail::Result<()> {
+        todo!();
     }
 
     pub fn request_semantic_tokens_full(&mut self, poller: &mut Poll) -> orfail::Result<()> {
-        // TODO
-        Ok(())
+        todo!();
     }
 
     fn read_response(&mut self) -> orfail::Result<()> {
