@@ -172,6 +172,7 @@ impl LspClient {
         struct Request<'a, T> {
             jsonrpc: JsonRpcVersion,
             method: &'static str,
+            #[serde(skip_serializing_if = "Option::is_none")]
             id: Option<i64>,
             params: &'a T,
         }
@@ -285,6 +286,20 @@ impl LspClient {
     }
 
     fn handle_stderr(&mut self) -> orfail::Result<()> {
+        let mut buf = vec![0; 4096];
+        loop {
+            match self.stderr.read(&mut buf) {
+                Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                    break;
+                }
+                Err(e) => {
+                    return Err(e).or_fail();
+                }
+                Ok(size) => {
+                    log::debug!("[LSP STDERR] {}", String::from_utf8_lossy(&buf[..size]));
+                }
+            }
+        }
         Ok(())
     }
 
