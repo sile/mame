@@ -8,6 +8,7 @@ clap = { version = "4.5.23", features = ["derive"] }
 crossterm = { version = "0.28.1", features = ["serde"] }
 jsonlrpc = "0.2.2"
 jsonlrpc_mio = "0.2.1"
+libc = "0.2.169"
 log = "0.4.22"
 mio = { version = "1.0.3", default-features = false, features = ["os-ext", "os-poll", "net"] }
 orfail = "1.1.0"
