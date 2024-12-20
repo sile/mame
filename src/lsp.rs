@@ -109,6 +109,7 @@ impl LspClient {
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
+            .envs(params.env.iter())
             .spawn()?;
         log::info!("Started LSP server: {}", params.command.display());
 
@@ -267,7 +268,7 @@ impl LspClient {
             }
 
             for response in std::mem::take(&mut self.responses) {
-                if let Err(e) = self.handle_response(response).or_fail() {
+                if let Err(e) = self.handle_response(poller, response).or_fail() {
                     log::error!("LSP server error: {e})");
                     let _ = self.lsp_server.kill();
                     return Ok(false);
@@ -278,17 +279,31 @@ impl LspClient {
         Ok(true)
     }
 
-    fn handle_response(&mut self, response: ResponseObject) -> orfail::Result<()> {
+    fn handle_response(
+        &mut self,
+        poller: &mut Poll,
+        response: ResponseObject,
+    ) -> orfail::Result<()> {
         let id = response.id().or_fail()?;
         let method = self.ongoing_requests.remove(id).or_fail()?;
         match method {
-            "initialize" => {
-                todo!();
-            }
+            "initialize" => self.handle_initialize_response(poller, response).or_fail(),
             _ => Err(orfail::Failure::new(format!(
                 "Unknown LSP response: {id:?}"
             ))),
         }
+    }
+
+    fn handle_initialize_response(
+        &mut self,
+        poller: &mut Poll,
+        response: ResponseObject,
+    ) -> orfail::Result<()> {
+        // TODO: Handle _response
+        log::debug!("LSP initialize response: {response:?}");
+        self.send(poller, "initialized", true, &serde_json::Value::Null)
+            .or_fail()?;
+        Ok(())
     }
 
     fn read_response(&mut self) -> orfail::Result<()> {
@@ -366,7 +381,8 @@ impl InitializeParams {
                 },
             },
             general: GeneralClientCapabilities {
-                position_encodings: vec![PositionEncodingKind::Utf8],
+                // TODO: position_encodings: vec![PositionEncodingKind::Utf8],
+                position_encodings: vec![PositionEncodingKind::Utf16],
             },
         };
         Self {

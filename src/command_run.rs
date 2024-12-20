@@ -68,6 +68,9 @@ impl RunCommand {
                         root_dir: PathBuf::from("file:///../../erlang/jsone/"),
                         command: PathBuf::from("erlls"),
                         args: Vec::new(),
+                        env: [("RUST_LOG".to_owned(), "debug".to_owned())]
+                            .into_iter()
+                            .collect(),
                     },
                 };
                 if rpc::call::<serde_json::Value>(addr, &request).is_err() {

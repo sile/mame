@@ -1,4 +1,5 @@
 use std::{
+    collections::BTreeMap,
     net::{SocketAddr, TcpStream},
     path::PathBuf,
 };
@@ -87,6 +88,8 @@ pub struct StartLspParams {
     pub root_dir: PathBuf,
     pub command: PathBuf,
     pub args: Vec<String>,
+    #[serde(default)]
+    pub env: BTreeMap<String, String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
