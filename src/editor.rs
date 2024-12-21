@@ -151,6 +151,8 @@ impl Editor {
                 continue;
             };
             lsp.notify_did_open(&mut self.poller, buffer).or_fail()?;
+            lsp.request_semantic_tokens_full(&mut self.poller, buffer)
+                .or_fail()?;
         }
 
         // TODO: semantic tokens

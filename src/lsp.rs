@@ -197,6 +197,8 @@ impl LspClient {
             params: &'a T,
         }
 
+        log::debug!("LSP request: {method}");
+
         let request = Request {
             jsonrpc: JsonRpcVersion::V2,
             method,
@@ -334,8 +336,11 @@ impl LspClient {
         let method = self.ongoing_requests.remove(id).or_fail()?;
         match method {
             "initialize" => self.handle_initialize_response(poller, response).or_fail(),
+            "textDocument/semanticTokens/full" => {
+                todo!();
+            }
             _ => Err(orfail::Failure::new(format!(
-                "Unknown LSP response: {id:?}"
+                "Unknown LSP response: id={id:?}, method={method}"
             ))),
         }
     }
@@ -366,7 +371,6 @@ impl LspClient {
     }
 
     pub fn notify_did_open(&mut self, poller: &mut Poll, buffer: &Buffer) -> orfail::Result<()> {
-        log::debug!("LSP request: textDocument/didOpen");
         let params = serde_json::json!({
             "textDocument": {
                 "uri": format!("file:///{}", buffer.id.path.display()),
@@ -380,8 +384,19 @@ impl LspClient {
         Ok(())
     }
 
-    pub fn request_semantic_tokens_full(&mut self, poller: &mut Poll) -> orfail::Result<()> {
-        todo!();
+    pub fn request_semantic_tokens_full(
+        &mut self,
+        poller: &mut Poll,
+        buffer: &Buffer,
+    ) -> orfail::Result<()> {
+        let params = serde_json::json!({
+            "textDocument": {
+                "uri": format!("file:///{}", buffer.id.path.display()),
+            }
+        });
+        self.send(poller, "textDocument/semanticTokens/full", false, &params)
+            .or_fail()?;
+        Ok(())
     }
 
     fn read_response(&mut self) -> orfail::Result<()> {
