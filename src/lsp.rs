@@ -366,7 +366,18 @@ impl LspClient {
     }
 
     pub fn notify_did_open(&mut self, poller: &mut Poll, buffer: &Buffer) -> orfail::Result<()> {
-        todo!();
+        log::debug!("LSP request: textDocument/didOpen");
+        let params = serde_json::json!({
+            "textDocument": {
+                "uri": format!("file:///{}", buffer.id.path.display()),
+                "languageId": "erlang", // TODO
+                "version": buffer.version,
+                "text": buffer.text()
+            }
+        });
+        self.send(poller, "textDocument/didOpen", true, &params)
+            .or_fail()?;
+        Ok(())
     }
 
     pub fn request_semantic_tokens_full(&mut self, poller: &mut Poll) -> orfail::Result<()> {
@@ -406,9 +417,16 @@ impl LspClient {
                     }
 
                     let content = &self.recv_buf[offset..][..content_len];
-                    let response: ResponseObject = serde_json::from_slice(content).or_fail()?;
-                    log::debug!("LSP response: {response:?}");
-                    self.responses.push(response);
+                    if let Ok(response) = serde_json::from_slice(content) {
+                        log::debug!("LSP response: {response:?}");
+                        self.responses.push(response);
+                    } else {
+                        // TODO: handle requests such as PublishDiagnostics
+                        log::warn!(
+                            "Unhandled server sside request: {}",
+                            String::from_utf8_lossy(content)
+                        );
+                    }
 
                     self.recv_buf.drain(..offset + content_len);
                     self.recv_buf_offset -= offset + content_len;

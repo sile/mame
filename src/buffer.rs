@@ -28,9 +28,14 @@ pub struct Buffer {
     pub start_line: usize,
     pub cursor: Cursor,
     pub lsp_server_name: Option<String>,
+    pub version: u64,
 }
 
 impl Buffer {
+    pub fn text(&self) -> String {
+        self.lines.join("\n")
+    }
+
     pub fn new<P: AsRef<Path>>(path: P) -> std::io::Result<Self> {
         let path = std::path::absolute(path)?;
         Ok(Self {
@@ -39,6 +44,7 @@ impl Buffer {
             start_line: 0,
             cursor: Cursor::default(),
             lsp_server_name: None,
+            version: 0,
         })
     }
 
@@ -52,6 +58,7 @@ impl Buffer {
             start_line: 0,
             cursor: Cursor::default(),
             lsp_server_name: None,
+            version: 0,
         })
     }
 
