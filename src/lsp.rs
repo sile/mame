@@ -7,13 +7,13 @@ use std::{
     process::{Child, ChildStderr, ChildStdin, ChildStdout, Command, Stdio},
 };
 
-use jsonlrpc::{JsonRpcVersion, RequestId, ResponseObject};
+use jsonlrpc::{ErrorObject, JsonRpcVersion, RequestId, ResponseObject};
 use mio::{event::Event, unix::SourceFd, Interest, Poll, Token};
 use orfail::OrFail;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{
-    buffer::Buffer,
+    buffer::{Buffer, BufferId},
     rpc::{self, RpcError, StartLspParams},
 };
 
@@ -75,9 +75,9 @@ impl LspClientManager {
         Ok(())
     }
 
-    pub fn handle_event(&mut self, poller: &mut Poll, event: &Event) -> orfail::Result<()> {
+    pub fn handle_event(&mut self, poller: &mut Poll, event: &Event) -> orfail::Result<bool> {
         let Some(id) = self.token_to_client_id.get(&event.token()) else {
-            return Ok(());
+            return Ok(false);
         };
         let client = self.clients.get_mut(id).expect("infallible");
         if !client.handle_event(poller, event).or_fail()? {
@@ -86,11 +86,19 @@ impl LspClientManager {
             self.token_to_client_id.remove(&client.stdout_token);
             self.token_to_client_id.remove(&client.stderr_token);
         }
-        Ok(())
+        Ok(true)
     }
 }
 
 const SEND_BUF_SIZE_LIMIT: usize = 1024 * 10;
+
+#[derive(Debug)]
+enum OngoingRequest {
+    Initialize,
+    SemanticTokensFull {
+        buffer_id: BufferId, // TODO: version
+    },
+}
 
 #[derive(Debug)]
 pub struct LspClient {
@@ -108,8 +116,9 @@ pub struct LspClient {
     recv_buf: Vec<u8>,
     recv_buf_offset: usize,
     next_request_id: i64,
-    ongoing_requests: HashMap<RequestId, &'static str>,
+    ongoing_requests: HashMap<RequestId, OngoingRequest>,
     responses: Vec<ResponseObject>,
+    semantic_token_types: Vec<SemanticTokenType>,
 }
 
 impl LspClient {
@@ -164,11 +173,12 @@ impl LspClient {
             next_request_id: 0,
             ongoing_requests: HashMap::new(),
             responses: Vec::new(),
+            semantic_token_types: Vec::new(),
         };
         this.send(
             poller,
             InitializeParams::METHOD,
-            false,
+            Some(OngoingRequest::Initialize),
             &InitializeParams::new(&params.root_dir),
         )
         .or_fail()
@@ -180,7 +190,7 @@ impl LspClient {
         &mut self,
         poller: &mut Poll,
         method: &'static str,
-        is_notification: bool,
+        ongoing: Option<OngoingRequest>,
         params: &T,
     ) -> orfail::Result<()> {
         if self.send_buf.len() > SEND_BUF_SIZE_LIMIT {
@@ -202,13 +212,13 @@ impl LspClient {
         let request = Request {
             jsonrpc: JsonRpcVersion::V2,
             method,
-            id: if is_notification {
-                None
-            } else {
+            id: if let Some(ongoing) = ongoing {
                 let id = self.next_request_id;
-                self.ongoing_requests.insert(RequestId::Number(id), method);
+                self.ongoing_requests.insert(RequestId::Number(id), ongoing);
                 self.next_request_id += 1;
                 Some(id)
+            } else {
+                None
             },
             params,
         };
@@ -335,14 +345,49 @@ impl LspClient {
         let id = response.id().or_fail()?;
         let method = self.ongoing_requests.remove(id).or_fail()?;
         match method {
-            "initialize" => self.handle_initialize_response(poller, response).or_fail(),
-            "textDocument/semanticTokens/full" => {
-                todo!();
+            OngoingRequest::Initialize => {
+                self.handle_initialize_response(poller, response).or_fail()
             }
-            _ => Err(orfail::Failure::new(format!(
-                "Unknown LSP response: id={id:?}, method={method}"
-            ))),
+            OngoingRequest::SemanticTokensFull { buffer_id } => self
+                .handle_semantic_tokens_full_response(poller, response, buffer_id)
+                .or_fail(),
         }
+    }
+
+    fn handle_semantic_tokens_full_response(
+        &mut self,
+        _poller: &mut Poll,
+        response: ResponseObject,
+        buffer_id: BufferId,
+    ) -> orfail::Result<()> {
+        let response = response.into_std_result().map_err(into_failure).or_fail()?; // TODO
+
+        #[derive(Debug, Deserialize)]
+        #[serde(rename_all = "camelCase")]
+        struct Response {
+            // #[serde(default)]
+            // result_id: Option<String>,
+            data: Vec<usize>,
+        }
+
+        let response: Response = serde_json::from_value(response).or_fail()?;
+        let mut line = 0;
+        let mut column = 0;
+        for chunk in response.data.chunks_exact(5) {
+            let delta_line = chunk[0];
+            let delta_start = chunk[1];
+            let token_len = chunk[2];
+            let token_type = self.semantic_token_types[chunk[3] as usize];
+            let _token_modifiers = chunk[4];
+            line += delta_line;
+            if delta_line == 0 {
+                column = 0;
+            }
+            column += delta_start;
+            todo!("{delta_line} ({line}), {delta_start} ({column}), {token_len}, {token_type:?}");
+        }
+
+        Ok(())
     }
 
     fn handle_initialize_response(
@@ -353,7 +398,42 @@ impl LspClient {
         // TODO: Handle _response
         log::debug!("LSP initialize response: {response:?}");
 
-        self.send(poller, "initialized", true, &serde_json::Value::Null)
+        let response = response.into_std_result().map_err(into_failure).or_fail()?; // TODO
+
+        #[derive(Debug, Deserialize)]
+        #[serde(rename_all = "camelCase")]
+        struct Legend {
+            token_types: Vec<SemanticTokenType>,
+            // token_modifiers: Vec<String>,
+        }
+
+        #[derive(Debug, Deserialize)]
+        #[serde(rename_all = "camelCase")]
+        struct SemanticTokensProvider {
+            legend: Legend,
+            // range: bool,
+            // full: bool,
+        }
+
+        #[derive(Debug, Deserialize)]
+        #[serde(rename_all = "camelCase")]
+        struct ServerCapabilities {
+            semantic_tokens_provider: SemanticTokensProvider,
+        }
+
+        #[derive(Debug, Deserialize)]
+        struct Response {
+            capabilities: ServerCapabilities,
+        }
+
+        let response: Response = serde_json::from_value(response).or_fail()?;
+        self.semantic_token_types = response
+            .capabilities
+            .semantic_tokens_provider
+            .legend
+            .token_types;
+
+        self.send(poller, "initialized", None, &serde_json::Value::Null)
             .or_fail()?;
 
         rpc::cast(
@@ -379,7 +459,7 @@ impl LspClient {
                 "text": buffer.text()
             }
         });
-        self.send(poller, "textDocument/didOpen", true, &params)
+        self.send(poller, "textDocument/didOpen", None, &params)
             .or_fail()?;
         Ok(())
     }
@@ -394,8 +474,15 @@ impl LspClient {
                 "uri": format!("file:///{}", buffer.id.path.display()),
             }
         });
-        self.send(poller, "textDocument/semanticTokens/full", false, &params)
-            .or_fail()?;
+        self.send(
+            poller,
+            "textDocument/semanticTokens/full",
+            Some(OngoingRequest::SemanticTokensFull {
+                buffer_id: buffer.id.clone(),
+            }),
+            &params,
+        )
+        .or_fail()?;
         Ok(())
     }
 
@@ -546,4 +633,36 @@ pub struct WorkspaceEditClientCapabilities {
 pub struct WorkspaceFolder {
     pub uri: PathBuf,
     pub name: String,
+}
+
+fn into_failure(error: ErrorObject) -> orfail::Failure {
+    orfail::Failure::new(error.to_string())
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum SemanticTokenType {
+    Namespace,
+    Type,
+    Class,
+    Enum,
+    Interface,
+    Struct,
+    TypeParameter,
+    Parameter,
+    Variable,
+    Property,
+    EnumMember,
+    Event,
+    Function,
+    Method,
+    Macro,
+    Keyword,
+    Modifier,
+    Comment,
+    String,
+    Number,
+    Regexp,
+    Operator,
+    Decorator,
 }
