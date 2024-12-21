@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     buffer::{Buffer, BufferId},
-    rpc::{self, RpcError, StartLspParams},
+    rpc::{self, RpcError, SemanticToken, StartLspParams},
 };
 
 #[derive(Debug)]
@@ -373,6 +373,7 @@ impl LspClient {
         let response: Response = serde_json::from_value(response).or_fail()?;
         let mut line = 0;
         let mut column = 0;
+        let mut tokens = Vec::new();
         for chunk in response.data.chunks_exact(5) {
             let delta_line = chunk[0];
             let delta_start = chunk[1];
@@ -384,8 +385,23 @@ impl LspClient {
                 column = 0;
             }
             column += delta_start;
-            todo!("{delta_line} ({line}), {delta_start} ({column}), {token_len}, {token_type:?}");
+            tokens.push(SemanticToken {
+                line,
+                column,
+                token_len,
+                token_type,
+            });
         }
+
+        // TODO: optimize
+        rpc::cast(
+            self.editor,
+            &rpc::Request::NotifySemanticTokens {
+                jsonrpc: JsonRpcVersion::V2,
+                params: rpc::NotifySemanticTokensParams { buffer_id, tokens },
+            },
+        )
+        .or_fail()?;
 
         Ok(())
     }

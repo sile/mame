@@ -10,6 +10,8 @@ use jsonlrpc_mio::ClientId;
 use orfail::OrFail;
 use serde::{Deserialize, Serialize};
 
+use crate::{buffer::BufferId, lsp::SemanticTokenType};
+
 pub fn call<T>(server_addr: SocketAddr, request: &Request) -> orfail::Result<T>
 where
     T: for<'de> Deserialize<'de>,
@@ -70,6 +72,10 @@ pub enum Request {
     NotifyLspStarted {
         jsonrpc: JsonRpcVersion,
         params: NotifyLspStartedParams,
+    },
+    NotifySemanticTokens {
+        jsonrpc: JsonRpcVersion,
+        params: NotifySemanticTokensParams,
     },
 }
 
@@ -148,3 +154,18 @@ impl From<std::io::Error> for RpcError {
 }
 
 pub type RpcResult<T> = Result<T, RpcError>;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NotifySemanticTokensParams {
+    pub buffer_id: BufferId,
+    // TODO: version
+    pub tokens: Vec<SemanticToken>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SemanticToken {
+    pub line: usize,
+    pub column: usize,
+    pub token_len: usize,
+    pub token_type: SemanticTokenType,
+}

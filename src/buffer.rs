@@ -1,8 +1,11 @@
 use std::path::{Path, PathBuf};
 
 use ratatui::layout::{Position, Size};
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+use crate::rpc::SemanticToken;
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct BufferId {
     pub name: String,
     pub path: PathBuf,
@@ -29,11 +32,16 @@ pub struct Buffer {
     pub cursor: Cursor,
     pub lsp_server_name: Option<String>,
     pub version: u64,
+    pub semantic_tokens: Vec<SemanticToken>,
 }
 
 impl Buffer {
     pub fn text(&self) -> String {
         self.lines.join("\n")
+    }
+
+    pub fn set_semantic_tokens(&mut self, tokens: &[SemanticToken]) {
+        self.semantic_tokens = tokens.to_owned();
     }
 
     pub fn new<P: AsRef<Path>>(path: P) -> std::io::Result<Self> {
@@ -45,6 +53,7 @@ impl Buffer {
             cursor: Cursor::default(),
             lsp_server_name: None,
             version: 0,
+            semantic_tokens: Vec::new(),
         })
     }
 
@@ -59,6 +68,7 @@ impl Buffer {
             cursor: Cursor::default(),
             lsp_server_name: None,
             version: 0,
+            semantic_tokens: Vec::new(),
         })
     }
 

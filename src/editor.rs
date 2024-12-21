@@ -18,8 +18,8 @@ use crate::{
     input::InputThread,
     lsp::LspClientManager,
     rpc::{
-        Caller, NotifyLspStartedParams, OpenReturnValue, Request, RpcError, RpcResult,
-        StartLspParams, StartLspReturnValue,
+        Caller, NotifyLspStartedParams, NotifySemanticTokensParams, OpenReturnValue, Request,
+        RpcError, RpcResult, StartLspParams, StartLspReturnValue,
     },
 };
 
@@ -90,7 +90,7 @@ impl Editor {
                     .or_fail()?
                 {
                     // TODO: optimize
-                    self.needs_redraw = true;
+                    // self.needs_redraw = true;
                 }
             }
             while let Some((from, request)) = self.rpc_server.try_recv() {
@@ -140,7 +140,20 @@ impl Editor {
             Request::NotifyLspStarted { params, .. } => {
                 self.handle_notify_lsp_started(params).or_fail()?;
             }
+            Request::NotifySemanticTokens { params, .. } => {
+                self.handle_notify_semantic_tokens(params).or_fail()?;
+            }
         }
+        Ok(())
+    }
+
+    fn handle_notify_semantic_tokens(
+        &mut self,
+        params: NotifySemanticTokensParams,
+    ) -> orfail::Result<()> {
+        let buffer = self.buffers.get_mut(&params.buffer_id).or_fail()?;
+        buffer.set_semantic_tokens(&params.tokens);
+        self.needs_redraw = true;
         Ok(())
     }
 
