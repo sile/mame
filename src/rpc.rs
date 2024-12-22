@@ -59,6 +59,13 @@ pub enum Request {
         id: RequestId,
         params: OpenParams,
     },
+    Save {
+        jsonrpc: JsonRpcVersion,
+        #[serde(default)]
+        id: Option<RequestId>,
+        #[serde(default)]
+        params: SaveParams,
+    },
     Exit {
         jsonrpc: JsonRpcVersion,
     },
@@ -88,6 +95,14 @@ pub struct NotifyTerminalEventParams {
 pub struct OpenParams {
     pub path: PathBuf,
 }
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct SaveParams {
+    // TODO: Optional buffer name
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SaveReturnValue {}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OpenReturnValue {
@@ -150,6 +165,12 @@ impl From<std::io::Error> for RpcError {
             kind: value.kind(),
             reason: value.to_string(),
         }
+    }
+}
+
+impl From<orfail::Failure> for RpcError {
+    fn from(value: orfail::Failure) -> Self {
+        Self::other(&value.to_string())
     }
 }
 

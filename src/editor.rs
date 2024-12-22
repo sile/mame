@@ -20,7 +20,7 @@ use crate::{
     lsp::{LspClientManager, SemanticTokenType},
     rpc::{
         Caller, NotifyLspStartedParams, NotifySemanticTokensParams, OpenReturnValue, Request,
-        RpcError, RpcResult, StartLspParams, StartLspReturnValue,
+        RpcError, RpcResult, SaveParams, SaveReturnValue, StartLspParams, StartLspReturnValue,
     },
 };
 
@@ -130,6 +130,14 @@ impl Editor {
                 let result = self.handle_open(params.path);
                 self.reply(caller, result).or_fail()?;
             }
+            Request::Save { id, params, .. } => {
+                let caller = id.map(|id| Caller::new(from, id));
+                let result = self.handle_save(params);
+                caller
+                    .map(|caller| self.reply(caller, result).or_fail())
+                    .transpose()?;
+            }
+
             Request::Exit { .. } => {
                 self.exit = true;
             }
@@ -146,6 +154,14 @@ impl Editor {
             }
         }
         Ok(())
+    }
+
+    fn handle_save(&mut self, _params: SaveParams) -> RpcResult<SaveReturnValue> {
+        self.current_buffer_mut()
+            .map(|b| b.save())
+            .transpose()
+            .or_fail()?;
+        Ok(SaveReturnValue {})
     }
 
     fn handle_notify_semantic_tokens(

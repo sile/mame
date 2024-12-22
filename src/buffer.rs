@@ -1,5 +1,6 @@
 use std::path::{Path, PathBuf};
 
+use orfail::OrFail;
 use ratatui::layout::{Position, Size};
 use serde::{Deserialize, Serialize};
 
@@ -36,6 +37,11 @@ pub struct Buffer {
 }
 
 impl Buffer {
+    pub fn save(&mut self) -> orfail::Result<()> {
+        let content = self.lines.join("\n");
+        std::fs::write(&self.id.path, &content).or_fail()
+    }
+
     pub fn line_tokens(&self, linenum: usize) -> Vec<(Option<SemanticTokenType>, &str)> {
         let mut tokens = Vec::new();
 
