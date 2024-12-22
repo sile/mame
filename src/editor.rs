@@ -17,6 +17,7 @@ use serde::Serialize;
 use crate::{
     buffer::{Buffer, BufferId, CursorDelta},
     input::InputThread,
+    key_mapper::KeyMapper,
     lsp::{LspClientManager, SemanticTokenType},
     rpc::{
         Caller, NotifyLspStartedParams, NotifySemanticTokensParams, OpenReturnValue, Request,
@@ -35,6 +36,7 @@ pub struct Editor {
     current_buffer_id: Option<BufferId>, // TODO: non optional
     needs_redraw: bool,
     terminal_size: Size,
+    key_mapper: KeyMapper,
 }
 
 impl Editor {
@@ -63,6 +65,7 @@ impl Editor {
             current_buffer_id: None,
             needs_redraw: true,
             terminal_size: Size::default(),
+            key_mapper: KeyMapper::new(),
         })
     }
 
