@@ -502,6 +502,48 @@ impl LspClient {
         Ok(())
     }
 
+    fn read_response_from_buf(&mut self) -> orfail::Result<()> {
+        let mut content_len = None;
+        let mut offset = 0;
+        while let Some(line_end) = self.recv_buf[offset..self.recv_buf_offset]
+            .windows(2)
+            .position(|b| b == b"\r\n")
+        {
+            if line_end == 0 {
+                let content_len = content_len.or_fail()?;
+                offset += 2;
+                if self.recv_buf[offset..self.recv_buf_offset].len() < content_len {
+                    break;
+                }
+
+                let content = &self.recv_buf[offset..][..content_len];
+                if let Ok(response) = serde_json::from_slice(content) {
+                    log::debug!("LSP response: {response:?}");
+                    self.responses.push(response);
+                } else {
+                    // TODO: handle requests such as PublishDiagnostics
+                    log::warn!(
+                        "Unhandled server sside request: {}",
+                        String::from_utf8_lossy(content)
+                    );
+                }
+
+                self.recv_buf.drain(..offset + content_len);
+                self.recv_buf_offset -= offset + content_len;
+                offset = 0;
+                continue;
+            }
+
+            let key = "content-length:";
+            let line = std::str::from_utf8(&self.recv_buf[offset..][..line_end]).or_fail()?;
+            if line.len() > key.len() && line[..key.len()].eq_ignore_ascii_case(key) {
+                content_len = Some(line[key.len()..].trim().parse::<usize>().or_fail()?);
+            }
+            offset += line_end + 2;
+        }
+        Ok(())
+    }
+
     fn read_response(&mut self) -> orfail::Result<()> {
         loop {
             if self.recv_buf.len() == self.recv_buf_offset {
@@ -520,45 +562,7 @@ impl LspClient {
                     self.recv_buf_offset += size;
                 }
             }
-
-            let mut content_len = None;
-            let mut offset = 0;
-            while let Some(line_end) = self.recv_buf[offset..self.recv_buf_offset]
-                .windows(2)
-                .position(|b| b == b"\r\n")
-            {
-                if line_end == 0 {
-                    let content_len = content_len.or_fail()?;
-                    offset += 2;
-                    if self.recv_buf[offset..self.recv_buf_offset].len() < content_len {
-                        return Ok(());
-                    }
-
-                    let content = &self.recv_buf[offset..][..content_len];
-                    if let Ok(response) = serde_json::from_slice(content) {
-                        log::debug!("LSP response: {response:?}");
-                        self.responses.push(response);
-                    } else {
-                        // TODO: handle requests such as PublishDiagnostics
-                        log::warn!(
-                            "Unhandled server sside request: {}",
-                            String::from_utf8_lossy(content)
-                        );
-                    }
-
-                    self.recv_buf.drain(..offset + content_len);
-                    self.recv_buf_offset -= offset + content_len;
-                    offset = 0;
-                    continue;
-                }
-
-                let key = "content-length:";
-                let line = std::str::from_utf8(&self.recv_buf[offset..][..line_end]).or_fail()?;
-                if line.len() > key.len() && line[..key.len()].eq_ignore_ascii_case(key) {
-                    content_len = Some(line[key.len()..].trim().parse::<usize>().or_fail()?);
-                }
-                offset += line_end + 2;
-            }
+            self.read_response_from_buf().or_fail()?;
         }
     }
 }
