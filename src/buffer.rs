@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use ratatui::layout::{Position, Size};
 use serde::{Deserialize, Serialize};
 
-use crate::rpc::SemanticToken;
+use crate::{lsp::SemanticTokenType, rpc::SemanticToken};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct BufferId {
@@ -36,6 +36,44 @@ pub struct Buffer {
 }
 
 impl Buffer {
+    pub fn line_tokens(&self, linenum: usize) -> Vec<(Option<SemanticTokenType>, &str)> {
+        let mut tokens = Vec::new();
+
+        let line = self.lines.get(linenum).map(|s| s.as_str()).unwrap_or("");
+        // let Ok(i) = self
+        //     .semantic_tokens
+        //     .binary_search_by_key(&linenum, |x| x.line)
+        // else {
+        //     return vec![(None, line)];
+        // };
+
+        let mut offset = 0;
+        //for token in &self.semantic_tokens[i..] {
+        // TODO: optimize
+        for token in &self.semantic_tokens {
+            if token.line < linenum {
+                continue;
+            }
+
+            if token.line != linenum {
+                tokens.push((None, &line[offset..]));
+                break;
+            }
+
+            if offset < token.column {
+                tokens.push((None, &line[offset..token.column]));
+                offset = token.column;
+            }
+            tokens.push((
+                Some(token.token_type),
+                &line[token.column..][..token.token_len],
+            ));
+            offset += token.token_len;
+        }
+
+        tokens
+    }
+
     pub fn text(&self) -> String {
         self.lines.join("\n")
     }

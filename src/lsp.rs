@@ -381,7 +381,7 @@ impl LspClient {
             let token_type = self.semantic_token_types[chunk[3] as usize];
             let _token_modifiers = chunk[4];
             line += delta_line;
-            if delta_line == 0 {
+            if delta_line != 0 {
                 column = 0;
             }
             column += delta_start;

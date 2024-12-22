@@ -8,7 +8,8 @@ use orfail::OrFail;
 use ratatui::{
     layout::{Position, Size},
     prelude::{Buffer as RenderBuffer, Rect},
-    text::Line,
+    style::{Color, Style},
+    text::{Line, Span},
     widgets::{self, Paragraph},
 };
 use serde::Serialize;
@@ -16,7 +17,7 @@ use serde::Serialize;
 use crate::{
     buffer::{Buffer, BufferId, CursorDelta},
     input::InputThread,
-    lsp::LspClientManager,
+    lsp::{LspClientManager, SemanticTokenType},
     rpc::{
         Caller, NotifyLspStartedParams, NotifySemanticTokensParams, OpenReturnValue, Request,
         RpcError, RpcResult, StartLspParams, StartLspReturnValue,
@@ -309,13 +310,44 @@ impl widgets::Widget for &Editor {
 
         // TODO: footer lines
 
-        let text = buffer
-            .lines
-            .iter()
-            .skip(buffer.start_line)
+        fn to_span((ty, text): (Option<SemanticTokenType>, &str)) -> Span {
+            let style = match ty {
+                None => Style::new(),
+                Some(ty) => {
+                    let color = match ty {
+                        SemanticTokenType::Namespace => todo!(),
+                        SemanticTokenType::Type => todo!(),
+                        SemanticTokenType::Class => Color::default(),
+                        SemanticTokenType::Enum => todo!(),
+                        SemanticTokenType::Interface => todo!(),
+                        SemanticTokenType::Struct => todo!(),
+                        SemanticTokenType::TypeParameter => todo!(),
+                        SemanticTokenType::Parameter => todo!(),
+                        SemanticTokenType::Variable => Color::Yellow,
+                        SemanticTokenType::Property => todo!(),
+                        SemanticTokenType::EnumMember => todo!(),
+                        SemanticTokenType::Event => todo!(),
+                        SemanticTokenType::Function => Color::Rgb(0x50, 0xD0, 0x50),
+                        SemanticTokenType::Method => todo!(),
+                        SemanticTokenType::Macro => Color::LightBlue,
+                        SemanticTokenType::Keyword => Color::LightMagenta,
+                        SemanticTokenType::Modifier => todo!(),
+                        SemanticTokenType::Comment => Color::Rgb(0xEF, 0x75, 0x21),
+                        SemanticTokenType::String => todo!(),
+                        SemanticTokenType::Number => Color::default(),
+                        SemanticTokenType::Regexp => todo!(),
+                        SemanticTokenType::Operator => Color::LightMagenta,
+                        SemanticTokenType::Decorator => todo!(),
+                    };
+                    Style::new().fg(color)
+                }
+            };
+            Span::styled(text, style)
+        }
+
+        let text = (buffer.start_line..)
             .take(area.as_size().height as usize)
-            .cloned()
-            .map(|line| Line::from(line))
+            .map(|line| Line::from_iter(buffer.line_tokens(line).into_iter().map(to_span)))
             .collect::<Vec<_>>();
 
         // TODO: try wrap() option
