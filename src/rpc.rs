@@ -74,6 +74,12 @@ pub enum Request {
         id: RequestId,
         params: StartLspParams,
     },
+    Move {
+        jsonrpc: JsonRpcVersion,
+        #[serde(default)]
+        id: Option<RequestId>,
+        params: MoveParams,
+    },
 
     // Internal
     NotifyLspStarted {
@@ -119,6 +125,15 @@ pub struct SaveParams {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SaveReturnValue {}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct MoveParams {
+    pub row: i32,
+    pub col: i32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MoveReturnValue {}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OpenReturnValue {

@@ -20,8 +20,9 @@ use crate::{
     key_mapper::KeyMapper,
     lsp::{LspClientManager, SemanticTokenType},
     rpc::{
-        Caller, NotifyLspStartedParams, NotifySemanticTokensParams, OpenReturnValue, Request,
-        RpcError, RpcResult, SaveParams, SaveReturnValue, StartLspParams, StartLspReturnValue,
+        Caller, MoveParams, MoveReturnValue, NotifyLspStartedParams, NotifySemanticTokensParams,
+        OpenReturnValue, Request, RpcError, RpcResult, SaveParams, SaveReturnValue, StartLspParams,
+        StartLspReturnValue,
     },
 };
 
@@ -140,7 +141,13 @@ impl Editor {
                     .map(|caller| self.reply(caller, result).or_fail())
                     .transpose()?;
             }
-
+            Request::Move { id, params, .. } => {
+                let caller = id.map(|id| Caller::new(from, id));
+                let result = self.handle_move(params);
+                caller
+                    .map(|caller| self.reply(caller, result).or_fail())
+                    .transpose()?;
+            }
             Request::Exit { .. } => {
                 self.exit = true;
             }
@@ -165,6 +172,10 @@ impl Editor {
             .transpose()
             .or_fail()?;
         Ok(SaveReturnValue {})
+    }
+
+    fn handle_move(&mut self, _params: MoveParams) -> RpcResult<MoveReturnValue> {
+        todo!()
     }
 
     fn handle_notify_semantic_tokens(
