@@ -86,6 +86,14 @@ pub enum Request {
     },
 }
 
+impl Request {
+    pub fn exit() -> Self {
+        Self::Exit {
+            jsonrpc: JsonRpcVersion::V2,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NotifyTerminalEventParams {
     pub event: TerminalEvent,
