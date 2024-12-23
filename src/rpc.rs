@@ -87,6 +87,14 @@ pub enum Request {
 }
 
 impl Request {
+    pub fn save() -> Self {
+        Self::Save {
+            jsonrpc: JsonRpcVersion::V2,
+            id: None,
+            params: SaveParams {},
+        }
+    }
+
     pub fn exit() -> Self {
         Self::Exit {
             jsonrpc: JsonRpcVersion::V2,

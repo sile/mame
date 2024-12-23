@@ -1,6 +1,6 @@
 use std::{collections::BTreeMap, net::SocketAddr, path::PathBuf};
 
-use crossterm::event::KeyCode;
+use crossterm::event::{KeyCode, KeyModifiers};
 use jsonlrpc::{JsonRpcVersion, RequestId};
 use jsonlrpc_mio::{ClientId, RpcServer};
 use mio::{Events, Poll, Token};
@@ -272,7 +272,7 @@ impl Editor {
             return Ok(());
         };
 
-        // TODO: key mapping
+        // TODO: remove hard coding mappings
         match key.code {
             KeyCode::Up => {
                 buffer.move_cursor(CursorDelta::xy(0, -1), terminal_size);
@@ -286,7 +286,12 @@ impl Editor {
             KeyCode::Left => {
                 buffer.move_cursor(CursorDelta::xy(-1, 0), terminal_size);
             }
-            KeyCode::Char(c) if !c.is_control() => {
+            KeyCode::Char(c)
+                if !c.is_control()
+                    && !key
+                        .modifiers
+                        .intersects(KeyModifiers::ALT | KeyModifiers::CONTROL) =>
+            {
                 buffer.insert_char(c);
             }
             KeyCode::Enter => {
@@ -295,7 +300,12 @@ impl Editor {
             KeyCode::Backspace => {
                 buffer.backspace_char();
             }
-            _ => {}
+            _ => {
+                if let Some(request) = self.key_mapper.handle_input(&key) {
+                    let dummy = ClientId::from(usize::MAX); // TODO
+                    self.handle_request(dummy, request).or_fail()?;
+                }
+            }
         }
 
         self.needs_redraw = true; // TODO: optimize
