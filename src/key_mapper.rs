@@ -22,6 +22,15 @@ impl KeyMapper {
         );
 
         this.add(
+            &[Key::from_char('a').ctrl()],
+            Request::move_to(None, Some(0)),
+        );
+        this.add(
+            &[Key::from_char('e').ctrl()],
+            Request::move_to(None, Some(u32::MAX)),
+        );
+
+        this.add(
             &[Key::from_char('x').ctrl(), Key::from_char('c').ctrl()],
             Request::exit(),
         );
@@ -38,7 +47,7 @@ impl KeyMapper {
 
         // TODO: optimize
         for i in 0..self.pending_keys.len() {
-            if let Some(request) = self.mapping.remove(&self.pending_keys[i..]) {
+            if let Some(request) = self.mapping.get(&self.pending_keys[i..]).cloned() {
                 self.pending_keys.clear();
                 return Some(request);
             }

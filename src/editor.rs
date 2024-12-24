@@ -20,9 +20,9 @@ use crate::{
     key_mapper::KeyMapper,
     lsp::{LspClientManager, SemanticTokenType},
     rpc::{
-        Caller, MoveParams, MoveReturnValue, NotifyLspStartedParams, NotifySemanticTokensParams,
-        OpenReturnValue, Request, RpcError, RpcResult, SaveParams, SaveReturnValue, StartLspParams,
-        StartLspReturnValue,
+        Caller, MoveToParams, MoveToReturnValue, NotifyLspStartedParams,
+        NotifySemanticTokensParams, OpenReturnValue, Request, RpcError, RpcResult, SaveParams,
+        SaveReturnValue, StartLspParams, StartLspReturnValue,
     },
 };
 
@@ -141,9 +141,9 @@ impl Editor {
                     .map(|caller| self.reply(caller, result).or_fail())
                     .transpose()?;
             }
-            Request::Move { id, params, .. } => {
+            Request::MoveTo { id, params, .. } => {
                 let caller = id.map(|id| Caller::new(from, id));
-                let result = self.handle_move(params);
+                let result = self.handle_move_to(params);
                 caller
                     .map(|caller| self.reply(caller, result).or_fail())
                     .transpose()?;
@@ -174,8 +174,14 @@ impl Editor {
         Ok(SaveReturnValue {})
     }
 
-    fn handle_move(&mut self, _params: MoveParams) -> RpcResult<MoveReturnValue> {
-        todo!()
+    fn handle_move_to(&mut self, params: MoveToParams) -> RpcResult<MoveToReturnValue> {
+        let terminal_size = self.terminal_size;
+        let Some(buffer) = self.current_buffer_mut() else {
+            return Ok(MoveToReturnValue {});
+        };
+        buffer.set_cursor(params.row, params.col, terminal_size);
+        self.needs_redraw = true;
+        Ok(MoveToReturnValue {})
     }
 
     fn handle_notify_semantic_tokens(

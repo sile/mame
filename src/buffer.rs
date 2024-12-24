@@ -116,6 +116,23 @@ impl Buffer {
         })
     }
 
+    pub fn set_cursor(&mut self, row: Option<u32>, col: Option<u32>, terminal_size: Size) {
+        if let Some(row) = row {
+            self.cursor.line = self.lines.len().min(row as usize);
+            if self.cursor.line - self.start_line > terminal_size.height as usize {
+                self.start_line = self.cursor.line - terminal_size.height as usize / 2;
+            }
+        }
+        if let Some(col) = col {
+            self.cursor.column = self
+                .lines
+                .get(self.cursor.line)
+                .map(|s| s.len())
+                .unwrap_or_default()
+                .min(col as usize);
+        }
+    }
+
     pub fn move_cursor(&mut self, delta: CursorDelta, terminal_size: Size) {
         self.cursor.line = self
             .cursor

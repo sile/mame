@@ -74,11 +74,11 @@ pub enum Request {
         id: RequestId,
         params: StartLspParams,
     },
-    Move {
+    MoveTo {
         jsonrpc: JsonRpcVersion,
         #[serde(default)]
         id: Option<RequestId>,
-        params: MoveParams,
+        params: MoveToParams,
     },
 
     // Internal
@@ -98,6 +98,14 @@ impl Request {
             jsonrpc: JsonRpcVersion::V2,
             id: None,
             params: SaveParams {},
+        }
+    }
+
+    pub fn move_to(row: Option<u32>, col: Option<u32>) -> Self {
+        Self::MoveTo {
+            jsonrpc: JsonRpcVersion::V2,
+            id: None,
+            params: MoveToParams { row, col },
         }
     }
 
@@ -127,13 +135,15 @@ pub struct SaveParams {
 pub struct SaveReturnValue {}
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
-pub struct MoveParams {
-    pub row: i32,
-    pub col: i32,
+pub struct MoveToParams {
+    #[serde(default)]
+    pub row: Option<u32>,
+    #[serde(default)]
+    pub col: Option<u32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MoveReturnValue {}
+pub struct MoveToReturnValue {}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OpenReturnValue {
