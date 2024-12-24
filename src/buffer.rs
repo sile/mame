@@ -106,14 +106,23 @@ impl Buffer {
                 let end = BufferPosition::new(row, col + s.len());
                 match (marked_region.contains(start), marked_region.contains(end)) {
                     (true, true) => {
-                        //  tokens.push((ty, true, s));
-                        todo!()
+                        tokens.push((ty, true, s));
                     }
                     (true, false) => {
-                        tokens.push((ty, false, s));
+                        let i = (col..=col + s.len())
+                            .map(|col| BufferPosition::new(row, col))
+                            .position(|p| !marked_region.contains(p))
+                            .expect("infallible");
+                        tokens.push((ty, true, &s[..i]));
+                        tokens.push((ty, false, &s[i..]));
                     }
                     (false, true) => {
-                        tokens.push((ty, false, s));
+                        let i = (col..=col + s.len())
+                            .map(|col| BufferPosition::new(row, col))
+                            .position(|p| marked_region.contains(p))
+                            .expect("infallible");
+                        tokens.push((ty, false, &s[..i]));
+                        tokens.push((ty, true, &s[i..]));
                     }
                     (false, false) => {
                         tokens.push((ty, false, s));
