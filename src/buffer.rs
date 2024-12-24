@@ -25,10 +25,27 @@ impl BufferId {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(
+    Debug, Default, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize,
+)]
 pub struct BufferPosition {
     pub row: usize,
     pub col: usize,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct BufferRegion {
+    pub start: BufferPosition,
+    pub end: BufferPosition,
+}
+
+impl BufferRegion {
+    fn new(p0: BufferPosition, p1: BufferPosition) -> Self {
+        Self {
+            start: p0.min(p1),
+            end: p0.max(p1),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -47,6 +64,13 @@ impl Buffer {
     pub fn save(&mut self) -> orfail::Result<()> {
         let content = self.lines.join("\n");
         std::fs::write(&self.id.path, &content).or_fail()
+    }
+
+    pub fn marked_region(&self) -> BufferRegion {
+        let Some(start) = self.mark_origin else {
+            return BufferRegion::default();
+        };
+        BufferRegion::new(start, self.cursor_buffer_position())
     }
 
     pub fn line_tokens(&self, linenum: usize) -> Vec<(Option<SemanticTokenType>, &str)> {
