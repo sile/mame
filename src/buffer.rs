@@ -25,6 +25,12 @@ impl BufferId {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
+pub struct BufferPosition {
+    pub row: usize,
+    pub col: usize,
+}
+
 #[derive(Debug)]
 pub struct Buffer {
     pub id: BufferId,
@@ -34,6 +40,7 @@ pub struct Buffer {
     pub lsp_server_name: Option<String>,
     pub version: u64,
     pub semantic_tokens: Vec<SemanticToken>,
+    pub mark_origin: Option<BufferPosition>,
 }
 
 impl Buffer {
@@ -89,22 +96,17 @@ impl Buffer {
     }
 
     pub fn new<P: AsRef<Path>>(path: P) -> std::io::Result<Self> {
-        let path = std::path::absolute(path)?;
-        Ok(Self {
-            id: BufferId::from_path(path),
-            lines: Vec::new(),
-            start_line: 0,
-            cursor: Cursor::default(),
-            lsp_server_name: None,
-            version: 0,
-            semantic_tokens: Vec::new(),
-        })
+        Self::open_file(path)
     }
 
     pub fn open_file<P: AsRef<Path>>(path: P) -> std::io::Result<Self> {
         // TODO: note about canonicalize
         let path = std::path::absolute(path)?;
-        let content = std::fs::read_to_string(&path)?;
+        let content = if path.exists() {
+            std::fs::read_to_string(&path)?
+        } else {
+            String::new()
+        };
         Ok(Self {
             id: BufferId::from_path(path),
             lines: content.lines().map(|l| l.to_owned()).collect(),
@@ -113,6 +115,7 @@ impl Buffer {
             lsp_server_name: None,
             version: 0,
             semantic_tokens: Vec::new(),
+            mark_origin: None,
         })
     }
 

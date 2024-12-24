@@ -66,6 +66,15 @@ pub enum Request {
         #[serde(default)]
         params: SaveParams,
     },
+    Mark {
+        jsonrpc: JsonRpcVersion,
+    },
+    Copy {
+        jsonrpc: JsonRpcVersion,
+    },
+    Paste {
+        jsonrpc: JsonRpcVersion,
+    },
     Cancel {
         jsonrpc: JsonRpcVersion,
     },

@@ -158,7 +158,9 @@ impl Editor {
             Request::Exit { .. } => {
                 self.exit = true;
             }
-            Request::Cancel { .. } => {}
+            Request::Cancel { .. } => {
+                self.handle_cancel();
+            }
             Request::StartLsp { id, params, .. } => {
                 let caller = Caller::new(from, id);
                 let result = self.handle_start_lsp(params);
@@ -170,8 +172,24 @@ impl Editor {
             Request::NotifySemanticTokens { params, .. } => {
                 self.handle_notify_semantic_tokens(params).or_fail()?;
             }
+            Request::Mark { .. } => {
+                self.handle_mark().or_fail()?;
+            }
+            Request::Copy { .. } => todo!(),
+            Request::Paste { .. } => todo!(),
         }
         Ok(())
+    }
+
+    fn handle_mark(&mut self) -> orfail::Result<()> {
+        // TODO
+        Ok(())
+    }
+
+    fn handle_cancel(&mut self) {
+        if let Some(buffer) = self.current_buffer_mut() {
+            buffer.mark_origin = None;
+        }
     }
 
     fn handle_save(&mut self, _params: SaveParams) -> RpcResult<SaveReturnValue> {
