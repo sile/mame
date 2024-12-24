@@ -182,7 +182,8 @@ impl Editor {
     }
 
     fn handle_mark(&mut self) -> orfail::Result<()> {
-        // TODO
+        let buffer = self.current_buffer_mut().or_fail()?;
+        buffer.mark();
         Ok(())
     }
 

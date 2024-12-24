@@ -95,6 +95,10 @@ impl Buffer {
         self.semantic_tokens = tokens.to_owned();
     }
 
+    pub fn mark(&mut self) {
+        self.mark_origin = Some(self.cursor_buffer_position());
+    }
+
     pub fn new<P: AsRef<Path>>(path: P) -> std::io::Result<Self> {
         Self::open_file(path)
     }
@@ -161,6 +165,14 @@ impl Buffer {
         );
     }
 
+    pub fn cursor_buffer_position(&self) -> BufferPosition {
+        BufferPosition {
+            col: self.cursor.column,
+            row: self.cursor.line,
+        }
+    }
+
+    // TODI
     pub fn cursor_position(&self) -> Position {
         Position {
             x: self.cursor.column as u16,
