@@ -158,6 +158,7 @@ impl Editor {
             Request::Exit { .. } => {
                 self.exit = true;
             }
+            Request::Cancel { .. } => {}
             Request::StartLsp { id, params, .. } => {
                 let caller = Caller::new(from, id);
                 let result = self.handle_start_lsp(params);

@@ -66,6 +66,9 @@ pub enum Request {
         #[serde(default)]
         params: SaveParams,
     },
+    Cancel {
+        jsonrpc: JsonRpcVersion,
+    },
     Exit {
         jsonrpc: JsonRpcVersion,
     },
@@ -120,6 +123,12 @@ impl Request {
             jsonrpc: JsonRpcVersion::V2,
             id: None,
             params: MoveDeltaParams { row, col },
+        }
+    }
+
+    pub fn cancel() -> Self {
+        Self::Cancel {
+            jsonrpc: JsonRpcVersion::V2,
         }
     }
 
