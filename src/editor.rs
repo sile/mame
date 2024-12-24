@@ -396,9 +396,10 @@ impl widgets::Widget for &Editor {
 
         // TODO: footer lines
 
-        fn to_span((ty, text): (Option<SemanticTokenType>, &str)) -> Span {
+        fn to_span((ty, marked, text): (Option<SemanticTokenType>, bool, &str)) -> Span {
+            let bg_color = marked.then_some(Color::Blue).unwrap_or_default();
             let style = match ty {
-                None => Style::new(),
+                None => Style::new().bg(bg_color),
                 Some(ty) => {
                     let color = match ty {
                         SemanticTokenType::Namespace => todo!(),
@@ -425,7 +426,7 @@ impl widgets::Widget for &Editor {
                         SemanticTokenType::Operator => Color::LightMagenta,
                         SemanticTokenType::Decorator => todo!(),
                     };
-                    Style::new().fg(color)
+                    Style::new().fg(color).bg(bg_color)
                 }
             };
             Span::styled(text, style)

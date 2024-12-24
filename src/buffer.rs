@@ -33,6 +33,12 @@ pub struct BufferPosition {
     pub col: usize,
 }
 
+impl BufferPosition {
+    pub fn new(row: usize, col: usize) -> Self {
+        Self { row, col }
+    }
+}
+
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct BufferRegion {
     pub start: BufferPosition,
@@ -41,10 +47,15 @@ pub struct BufferRegion {
 
 impl BufferRegion {
     fn new(p0: BufferPosition, p1: BufferPosition) -> Self {
+        // TODO: remove min / max
         Self {
             start: p0.min(p1),
             end: p0.max(p1),
         }
+    }
+
+    pub fn contains(self, pos: BufferPosition) -> bool {
+        (self.start..self.end).contains(&pos)
     }
 }
 
@@ -73,7 +84,11 @@ impl Buffer {
         BufferRegion::new(start, self.cursor_buffer_position())
     }
 
-    pub fn line_tokens(&self, linenum: usize) -> Vec<(Option<SemanticTokenType>, &str)> {
+    pub fn line_tokens<'a>(
+        &'a self,
+        linenum: usize,
+    ) -> Vec<(Option<SemanticTokenType>, bool, &'a str)> {
+        let marked_region = self.marked_region();
         let mut tokens = Vec::new();
 
         let line = self.lines.get(linenum).map(|s| s.as_str()).unwrap_or("");
@@ -84,6 +99,28 @@ impl Buffer {
         //     return vec![(None, line)];
         // };
 
+        let push_token =
+            |tokens: &mut Vec<(Option<SemanticTokenType>, bool, &'a str)>, ty, s: &'a str, col| {
+                let row = linenum;
+                let start = BufferPosition::new(row, col);
+                let end = BufferPosition::new(row, col + s.len());
+                match (marked_region.contains(start), marked_region.contains(end)) {
+                    (true, true) => {
+                        //  tokens.push((ty, true, s));
+                        todo!()
+                    }
+                    (true, false) => {
+                        tokens.push((ty, false, s));
+                    }
+                    (false, true) => {
+                        tokens.push((ty, false, s));
+                    }
+                    (false, false) => {
+                        tokens.push((ty, false, s));
+                    }
+                }
+            };
+
         let mut offset = 0;
         //for token in &self.semantic_tokens[i..] {
         // TODO: optimize
@@ -93,18 +130,20 @@ impl Buffer {
             }
 
             if token.line != linenum {
-                tokens.push((None, &line[offset..]));
+                push_token(&mut tokens, None, &line[offset..], offset);
                 break;
             }
 
             if offset < token.column {
-                tokens.push((None, &line[offset..token.column]));
+                push_token(&mut tokens, None, &line[offset..token.column], offset);
                 offset = token.column;
             }
-            tokens.push((
+            push_token(
+                &mut tokens,
                 Some(token.token_type),
                 &line[token.column..][..token.token_len],
-            ));
+                offset,
+            );
             offset += token.token_len;
         }
 
