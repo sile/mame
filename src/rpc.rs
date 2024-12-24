@@ -80,6 +80,12 @@ pub enum Request {
         id: Option<RequestId>,
         params: MoveToParams,
     },
+    MoveDelta {
+        jsonrpc: JsonRpcVersion,
+        #[serde(default)]
+        id: Option<RequestId>,
+        params: MoveDeltaParams,
+    },
 
     // Internal
     NotifyLspStarted {
@@ -106,6 +112,14 @@ impl Request {
             jsonrpc: JsonRpcVersion::V2,
             id: None,
             params: MoveToParams { row, col },
+        }
+    }
+
+    pub fn move_delta(row: i16, col: i16) -> Self {
+        Self::MoveDelta {
+            jsonrpc: JsonRpcVersion::V2,
+            id: None,
+            params: MoveDeltaParams { row, col },
         }
     }
 
@@ -144,6 +158,17 @@ pub struct MoveToParams {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MoveToReturnValue {}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct MoveDeltaParams {
+    #[serde(default)]
+    pub row: i16,
+    #[serde(default)]
+    pub col: i16,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MoveDeltaReturnValue {}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OpenReturnValue {

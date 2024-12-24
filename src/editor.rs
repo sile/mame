@@ -20,9 +20,9 @@ use crate::{
     key_mapper::KeyMapper,
     lsp::{LspClientManager, SemanticTokenType},
     rpc::{
-        Caller, MoveToParams, MoveToReturnValue, NotifyLspStartedParams,
-        NotifySemanticTokensParams, OpenReturnValue, Request, RpcError, RpcResult, SaveParams,
-        SaveReturnValue, StartLspParams, StartLspReturnValue,
+        Caller, MoveDeltaParams, MoveDeltaReturnValue, MoveToParams, MoveToReturnValue,
+        NotifyLspStartedParams, NotifySemanticTokensParams, OpenReturnValue, Request, RpcError,
+        RpcResult, SaveParams, SaveReturnValue, StartLspParams, StartLspReturnValue,
     },
 };
 
@@ -148,6 +148,13 @@ impl Editor {
                     .map(|caller| self.reply(caller, result).or_fail())
                     .transpose()?;
             }
+            Request::MoveDelta { id, params, .. } => {
+                let caller = id.map(|id| Caller::new(from, id));
+                let result = self.handle_move_delta(params);
+                caller
+                    .map(|caller| self.reply(caller, result).or_fail())
+                    .transpose()?;
+            }
             Request::Exit { .. } => {
                 self.exit = true;
             }
@@ -182,6 +189,19 @@ impl Editor {
         buffer.set_cursor(params.row, params.col, terminal_size);
         self.needs_redraw = true;
         Ok(MoveToReturnValue {})
+    }
+
+    fn handle_move_delta(&mut self, params: MoveDeltaParams) -> RpcResult<MoveDeltaReturnValue> {
+        let terminal_size = self.terminal_size;
+        let Some(buffer) = self.current_buffer_mut() else {
+            return Ok(MoveDeltaReturnValue {}); // TODO: error
+        };
+        buffer.move_cursor(
+            CursorDelta::xy(params.col as isize, params.row as isize),
+            terminal_size,
+        );
+        self.needs_redraw = true;
+        Ok(MoveDeltaReturnValue {})
     }
 
     fn handle_notify_semantic_tokens(

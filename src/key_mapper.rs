@@ -30,6 +30,11 @@ impl KeyMapper {
             Request::move_to(None, Some(u32::MAX)),
         );
 
+        this.add(&[Key::from_char('b').ctrl()], Request::move_delta(0, -1));
+        this.add(&[Key::from_char('f').ctrl()], Request::move_delta(0, 1));
+        this.add(&[Key::from_char('p').ctrl()], Request::move_delta(-1, 0));
+        this.add(&[Key::from_char('n').ctrl()], Request::move_delta(1, 0));
+
         this.add(
             &[Key::from_char('x').ctrl(), Key::from_char('c').ctrl()],
             Request::exit(),
