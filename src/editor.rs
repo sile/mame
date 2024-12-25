@@ -188,12 +188,18 @@ impl Editor {
     }
 
     fn handle_paste(&mut self) -> orfail::Result<()> {
-        todo!()
+        // TODO: remove clone()
+        let Some(text) = self.clipboard.clone() else {
+            return Ok(());
+        };
+        self.current_buffer_mut().or_fail()?.insert_text(&text);
+        Ok(())
     }
 
     fn handle_copy(&mut self) -> orfail::Result<()> {
         let text = self.current_buffer().or_fail()?.marked_text();
         self.clipboard = text;
+        self.current_buffer_mut().or_fail()?.mark_origin = None;
         Ok(())
     }
 

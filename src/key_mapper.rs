@@ -35,6 +35,9 @@ impl KeyMapper {
         this.add(&[Key::from_char('p').ctrl()], Request::move_delta(-1, 0));
         this.add(&[Key::from_char('n').ctrl()], Request::move_delta(1, 0));
 
+        this.add(&[Key::from_char('w').alt()], Request::copy());
+        this.add(&[Key::from_char('y').ctrl()], Request::paste());
+
         this.add(&[Key::from_char(' ').ctrl()], Request::mark());
 
         this.add(

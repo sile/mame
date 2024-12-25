@@ -285,6 +285,17 @@ impl Buffer {
         }
     }
 
+    pub fn insert_text(&mut self, text: &str) {
+        // TODO: optimize
+        for c in text.chars() {
+            if c == '\n' {
+                self.insert_newline();
+            } else {
+                self.insert_char(c);
+            }
+        }
+    }
+
     pub fn insert_char(&mut self, c: char) {
         let Some(line) = self.lines.get_mut(self.cursor.line) else {
             return;

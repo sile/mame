@@ -125,6 +125,18 @@ impl Request {
         }
     }
 
+    pub fn copy() -> Self {
+        Self::Copy {
+            jsonrpc: JsonRpcVersion::V2,
+        }
+    }
+
+    pub fn paste() -> Self {
+        Self::Paste {
+            jsonrpc: JsonRpcVersion::V2,
+        }
+    }
+
     pub fn move_to(row: Option<u32>, col: Option<u32>) -> Self {
         Self::MoveTo {
             jsonrpc: JsonRpcVersion::V2,
