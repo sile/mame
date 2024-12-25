@@ -57,6 +57,10 @@ impl BufferRegion {
     pub fn contains(self, pos: BufferPosition) -> bool {
         (self.start..self.end).contains(&pos)
     }
+
+    pub fn is_empty(self) -> bool {
+        self.end <= self.start
+    }
 }
 
 #[derive(Debug)]
@@ -82,6 +86,35 @@ impl Buffer {
             return BufferRegion::default();
         };
         BufferRegion::new(start, self.cursor_buffer_position())
+    }
+
+    pub fn marked_text(&self) -> Option<String> {
+        let region = self.marked_region();
+        if region.is_empty() {
+            return None;
+        }
+
+        let mut text = String::new();
+        for row in region.start.row..=region.end.row {
+            let line = &self.lines[row];
+            match (region.start.row == row, region.end.row == row) {
+                (true, true) => {
+                    text.push_str(&line[region.start.col..region.end.col]);
+                }
+                (true, false) => {
+                    text.push_str(&line[region.start.col..]);
+                    text.push('\n');
+                }
+                (false, true) => {
+                    text.push_str(&line[..region.end.col]);
+                }
+                (false, false) => {
+                    text.push_str(line);
+                    text.push('\n');
+                }
+            }
+        }
+        Some(text)
     }
 
     pub fn line_tokens<'a>(

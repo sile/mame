@@ -38,6 +38,7 @@ pub struct Editor {
     needs_redraw: bool,
     terminal_size: Size,
     key_mapper: KeyMapper,
+    clipboard: Option<String>,
 }
 
 impl Editor {
@@ -67,6 +68,7 @@ impl Editor {
             needs_redraw: true,
             terminal_size: Size::default(),
             key_mapper: KeyMapper::new(),
+            clipboard: None,
         })
     }
 
@@ -175,9 +177,23 @@ impl Editor {
             Request::Mark { .. } => {
                 self.handle_mark().or_fail()?;
             }
-            Request::Copy { .. } => todo!(),
-            Request::Paste { .. } => todo!(),
+            Request::Copy { .. } => {
+                self.handle_copy().or_fail()?;
+            }
+            Request::Paste { .. } => {
+                self.handle_paste().or_fail()?;
+            }
         }
+        Ok(())
+    }
+
+    fn handle_paste(&mut self) -> orfail::Result<()> {
+        todo!()
+    }
+
+    fn handle_copy(&mut self) -> orfail::Result<()> {
+        let text = self.current_buffer().or_fail()?.marked_text();
+        self.clipboard = text;
         Ok(())
     }
 
