@@ -88,6 +88,18 @@ impl Buffer {
         BufferRegion::new(start, self.cursor_buffer_position())
     }
 
+    pub fn take_marked_text(&mut self) -> Option<String> {
+        let Some(text) = self.marked_text() else {
+            return None;
+        };
+        // TODO: optimize
+        // TODO: handle reverse marked case
+        for _ in text.chars() {
+            self.backspace_char();
+        }
+        Some(text)
+    }
+
     pub fn marked_text(&self) -> Option<String> {
         let region = self.marked_region();
         if region.is_empty() {
@@ -316,6 +328,11 @@ impl Buffer {
         self.cursor.line += 1;
         self.cursor.column = 0;
         self.lines.insert(self.cursor.line, new);
+    }
+
+    pub fn delete_char(&mut self) {
+        // TODO
+        todo!()
     }
 
     pub fn backspace_char(&mut self) {

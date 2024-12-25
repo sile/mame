@@ -69,6 +69,9 @@ pub enum Request {
     Mark {
         jsonrpc: JsonRpcVersion,
     },
+    Cut {
+        jsonrpc: JsonRpcVersion,
+    },
     Copy {
         jsonrpc: JsonRpcVersion,
     },
@@ -127,6 +130,12 @@ impl Request {
 
     pub fn copy() -> Self {
         Self::Copy {
+            jsonrpc: JsonRpcVersion::V2,
+        }
+    }
+
+    pub fn cut() -> Self {
+        Self::Cut {
             jsonrpc: JsonRpcVersion::V2,
         }
     }

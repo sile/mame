@@ -180,6 +180,9 @@ impl Editor {
             Request::Copy { .. } => {
                 self.handle_copy().or_fail()?;
             }
+            Request::Cut { .. } => {
+                self.handle_cut().or_fail()?;
+            }
             Request::Paste { .. } => {
                 self.handle_paste().or_fail()?;
             }
@@ -198,6 +201,13 @@ impl Editor {
 
     fn handle_copy(&mut self) -> orfail::Result<()> {
         let text = self.current_buffer().or_fail()?.marked_text();
+        self.clipboard = text;
+        self.current_buffer_mut().or_fail()?.mark_origin = None;
+        Ok(())
+    }
+
+    fn handle_cut(&mut self) -> orfail::Result<()> {
+        let text = self.current_buffer_mut().or_fail()?.take_marked_text();
         self.clipboard = text;
         self.current_buffer_mut().or_fail()?.mark_origin = None;
         Ok(())
