@@ -1,21 +1,18 @@
-use std::{collections::BTreeMap, net::SocketAddr, path::PathBuf};
+use std::{collections::BTreeMap, io::Write, net::SocketAddr, path::PathBuf};
 
-use crossterm::event::{KeyCode, KeyModifiers};
+use crossterm::{
+    event::{KeyCode, KeyModifiers},
+    style::{Color, ContentStyle, StyledContent},
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen},
+};
 use jsonlrpc::{JsonRpcVersion, RequestId};
 use jsonlrpc_mio::{ClientId, RpcServer};
 use mio::{Events, Poll, Token};
 use orfail::OrFail;
-use ratatui::{
-    layout::{Position, Size},
-    prelude::{Buffer as RenderBuffer, Rect},
-    style::{Color, Style},
-    text::{Line, Span},
-    widgets::{self, Paragraph},
-};
 use serde::Serialize;
 
 use crate::{
-    buffer::{Buffer, BufferId, CursorDelta},
+    buffer::{Buffer, BufferId, CursorDelta, Position, Size},
     input::InputThread,
     key_mapper::KeyMapper,
     lsp::{LspClientManager, SemanticTokenType},
@@ -78,9 +75,12 @@ impl Editor {
     }
 
     pub fn run(mut self) -> orfail::Result<()> {
-        let mut terminal = ratatui::init();
-        terminal.clear().or_fail()?;
-        self.terminal_size = terminal.size().or_fail()?; // TODO: .get_frame().area()
+        crossterm::execute!(std::io::stdout(), EnterAlternateScreen).or_fail()?;
+        crossterm::terminal::enable_raw_mode().or_fail()?;
+
+        self.terminal_size = crossterm::terminal::size()
+            .map(|(width, height)| Size { width, height })
+            .or_fail()?;
 
         let input_thread_handle = InputThread::start(self.rpc_server.listen_addr()).or_fail()?;
 
@@ -106,12 +106,12 @@ impl Editor {
             }
 
             if self.needs_redraw {
-                terminal
-                    .draw(|frame| {
-                        frame.render_widget(&self, frame.area());
-                        frame.set_cursor_position(self.cursor_position());
-                    })
-                    .or_fail()?;
+                self.render().or_fail()?;
+                crossterm::execute!(
+                    std::io::stdout(),
+                    crossterm::cursor::MoveTo(self.cursor_position().x, self.cursor_position().y)
+                )
+                .or_fail()?;
                 self.needs_redraw = false;
             }
 
@@ -121,7 +121,8 @@ impl Editor {
         }
 
         log::info!("Editor exited: addr={}", self.rpc_server.listen_addr());
-        ratatui::restore();
+        crossterm::terminal::disable_raw_mode().or_fail()?;
+        crossterm::execute!(std::io::stdout(), LeaveAlternateScreen).or_fail()?; // TODO: call in Drop
 
         Ok(())
     }
@@ -432,58 +433,83 @@ impl Editor {
             .map(|b| b.cursor_position())
             .unwrap_or_default()
     }
-}
 
-impl widgets::Widget for &Editor {
-    fn render(self, area: Rect, render_buffer: &mut RenderBuffer) {
+    fn render(&mut self) -> orfail::Result<()> {
+        // TODO: optimize
         let Some(buffer) = self.current_buffer() else {
-            return;
+            return Ok(());
         };
 
         // TODO: footer lines
 
-        fn to_span((ty, marked, text): (Option<SemanticTokenType>, bool, &str)) -> Span {
-            let bg_color = marked.then_some(Color::Blue).unwrap_or_default();
-            let style = match ty {
-                None => Style::new().bg(bg_color),
-                Some(ty) => {
-                    let color = match ty {
+        crossterm::queue!(
+            std::io::stdout(),
+            crossterm::cursor::RestorePosition,
+            crossterm::terminal::Clear(crossterm::terminal::ClearType::All)
+        )
+        .or_fail()?;
+        for (y, row) in (buffer.start_line..)
+            .take(self.terminal_size.height as usize)
+            .enumerate()
+        {
+            crossterm::queue!(std::io::stdout(), crossterm::cursor::MoveTo(0, y as u16))
+                .or_fail()?;
+            for (ty, marked, text) in buffer.line_tokens(row).into_iter() {
+                let bg_color = marked.then_some(Color::Blue);
+                let fg_color = match ty {
+                    None => None,
+                    Some(ty) => match ty {
                         SemanticTokenType::Namespace => todo!(),
                         SemanticTokenType::Type => todo!(),
-                        SemanticTokenType::Class => Color::default(),
+                        SemanticTokenType::Class => None,
                         SemanticTokenType::Enum => todo!(),
                         SemanticTokenType::Interface => todo!(),
                         SemanticTokenType::Struct => todo!(),
                         SemanticTokenType::TypeParameter => todo!(),
                         SemanticTokenType::Parameter => todo!(),
-                        SemanticTokenType::Variable => Color::Yellow,
+                        SemanticTokenType::Variable => Some(Color::Yellow),
                         SemanticTokenType::Property => todo!(),
                         SemanticTokenType::EnumMember => todo!(),
                         SemanticTokenType::Event => todo!(),
-                        SemanticTokenType::Function => Color::Rgb(0x50, 0xD0, 0x50),
+                        SemanticTokenType::Function => Some(Color::Rgb {
+                            r: 0x50,
+                            g: 0xD0,
+                            b: 0x50,
+                        }),
                         SemanticTokenType::Method => todo!(),
-                        SemanticTokenType::Macro => Color::LightBlue,
-                        SemanticTokenType::Keyword => Color::LightMagenta,
+                        SemanticTokenType::Macro => Some(Color::Blue),
+                        SemanticTokenType::Keyword => Some(Color::Magenta),
                         SemanticTokenType::Modifier => todo!(),
-                        SemanticTokenType::Comment => Color::Rgb(0xEF, 0x75, 0x21),
+                        SemanticTokenType::Comment => Some(Color::Rgb {
+                            r: 0xEF,
+                            g: 0x75,
+                            b: 0x21,
+                        }),
                         SemanticTokenType::String => todo!(),
-                        SemanticTokenType::Number => Color::default(),
+                        SemanticTokenType::Number => None,
                         SemanticTokenType::Regexp => todo!(),
-                        SemanticTokenType::Operator => Color::LightMagenta,
+                        SemanticTokenType::Operator => None,
                         SemanticTokenType::Decorator => todo!(),
-                    };
-                    Style::new().fg(color).bg(bg_color)
-                }
-            };
-            Span::styled(text, style)
+                    },
+                };
+                let content = StyledContent::new(
+                    ContentStyle {
+                        foreground_color: fg_color,
+                        background_color: bg_color,
+                        ..Default::default()
+                    },
+                    text,
+                );
+                crossterm::queue!(
+                    std::io::stdout(),
+                    crossterm::style::PrintStyledContent(content)
+                )
+                .or_fail()?;
+            }
         }
+        crossterm::queue!(std::io::stdout(), crossterm::cursor::RestorePosition,).or_fail()?;
+        std::io::stdout().flush().or_fail()?;
 
-        let text = (buffer.start_line..)
-            .take(area.as_size().height as usize)
-            .map(|line| Line::from_iter(buffer.line_tokens(line).into_iter().map(to_span)))
-            .collect::<Vec<_>>();
-
-        // TODO: try wrap() option
-        Paragraph::new(text).render(area, render_buffer);
+        Ok(())
     }
 }

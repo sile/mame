@@ -1,10 +1,25 @@
 use std::path::{Path, PathBuf};
 
 use orfail::OrFail;
-use ratatui::layout::{Position, Size};
 use serde::{Deserialize, Serialize};
 
 use crate::{lsp::SemanticTokenType, rpc::SemanticToken};
+
+#[derive(
+    Debug, Default, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize,
+)]
+pub struct Size {
+    pub width: u16,
+    pub height: u16,
+}
+
+#[derive(
+    Debug, Default, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize,
+)]
+pub struct Position {
+    pub x: u16,
+    pub y: u16,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct BufferId {
