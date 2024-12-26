@@ -3,5 +3,6 @@ pub mod command_run;
 pub mod editor;
 pub mod input;
 pub mod key_mapper;
+pub mod logger;
 pub mod lsp;
 pub mod rpc;
