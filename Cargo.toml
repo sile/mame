@@ -2,6 +2,12 @@
 name = "mame"
 version = "0.0.0"
 edition = "2021"
+authors = ["Takeru Ohta <phjgt308@gmail.com>"]
+license = "MIT"
+description = "TUI text editor"
+homepage = "https://github.com/sile/mame"
+repository = "https://github.com/sile/mame"
+readme = "README.md"
 
 [dependencies]
 clap = { version = "4.5.23", features = ["derive"] }
