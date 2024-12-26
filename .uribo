@@ -6,7 +6,7 @@
       "run",
       "../../erlang/jsone/src/jsone.erl",
       "--logfile",
-      "mameda.log",
+      "mame.log",
       "--loglevel",
       "debug"
     ],
