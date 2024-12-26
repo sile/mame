@@ -387,7 +387,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "mameda"
+name = "mame"
 version = "0.1.0"
 dependencies = [
  "clap",
