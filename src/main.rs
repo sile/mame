@@ -1,5 +1,5 @@
 use clap::Parser;
-use mameda::command_run::RunCommand;
+use mame::command_run::RunCommand;
 use orfail::OrFail;
 
 #[derive(Parser)]
