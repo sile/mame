@@ -45,7 +45,6 @@ impl KeyMapper {
             &[Key::from_char('x').ctrl(), Key::from_char('c').ctrl()],
             Request::exit(),
         );
-        this.add(&[Key::new(KeyCode::Esc)], Request::exit()); // TODO
 
         this.add(&[Key::from_char('g').ctrl()], Request::cancel());
 
