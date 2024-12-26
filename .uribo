@@ -3,7 +3,6 @@
     "command": "cargo",
     "args": [
       "run",
-      "run",
       "../../erlang/jsone/src/jsone.erl",
       "--logfile",
       "mame.log",

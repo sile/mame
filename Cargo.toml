@@ -10,7 +10,6 @@ repository = "https://github.com/sile/mame"
 readme = "README.md"
 
 [dependencies]
-clap = { version = "4.5.23", features = ["derive"] }
 crossterm = { version = "0.28.1", features = ["serde"] }
 jsonlrpc = "0.2.2"
 jsonlrpc_mio = "0.2.1"
