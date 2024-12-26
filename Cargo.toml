@@ -10,7 +10,7 @@ repository = "https://github.com/sile/mame"
 readme = "README.md"
 
 [dependencies]
-crossterm = { version = "0.28.1", features = ["serde"] }
+crossterm = { version = "0.28.1", default-features=false, features = ["events", "bracketed-paste", "serde"] }
 jsonlrpc = "0.2.2"
 jsonlrpc_mio = "0.2.1"
 libc = "0.2.169"
