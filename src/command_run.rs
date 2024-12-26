@@ -8,7 +8,6 @@ use simplelog::{ConfigBuilder, WriteLogger};
 
 use crate::{
     editor::Editor,
-    logger::Logger,
     rpc::{self, OpenParams, Request, StartLspParams},
 };
 
@@ -26,8 +25,6 @@ pub struct RunCommand {
 
 impl RunCommand {
     pub fn run(self, port: u16) -> orfail::Result<()> {
-        Logger::start();
-
         if let Some(logfile) = self.logfile {
             let _ = WriteLogger::init(
                 self.loglevel,
@@ -47,6 +44,7 @@ impl RunCommand {
 
         let editor = Editor::new(port).or_fail()?;
         let addr = editor.addr();
+        //Logger::start(addr);
         if let Some(path) = self.path {
             std::thread::spawn(move || {
                 let request = Request::Open {
