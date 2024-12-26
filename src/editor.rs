@@ -20,9 +20,10 @@ use crate::{
     key_mapper::KeyMapper,
     lsp::{LspClientManager, SemanticTokenType},
     rpc::{
-        Caller, MoveDeltaParams, MoveDeltaReturnValue, MoveToParams, MoveToReturnValue,
-        NotifyLspStartedParams, NotifySemanticTokensParams, OpenReturnValue, Request, RpcError,
-        RpcResult, SaveParams, SaveReturnValue, StartLspParams, StartLspReturnValue,
+        Caller, CommandParams, MoveDeltaParams, MoveDeltaReturnValue, MoveToParams,
+        MoveToReturnValue, NotifyLspStartedParams, NotifySemanticTokensParams, OpenReturnValue,
+        Request, RpcError, RpcResult, SaveParams, SaveReturnValue, StartLspParams,
+        StartLspReturnValue,
     },
 };
 
@@ -186,7 +187,20 @@ impl Editor {
             Request::Paste { .. } => {
                 self.handle_paste().or_fail()?;
             }
+            Request::Command { params, .. } => {
+                self.handle_command(params).or_fail()?;
+            }
         }
+        Ok(())
+    }
+
+    fn handle_command(&mut self, params: CommandParams) -> orfail::Result<()> {
+        std::thread::spawn(move || {
+            // TODO: error handling, etc
+            let _ = std::process::Command::new(&params.path)
+                .args(&params.args)
+                .output();
+        });
         Ok(())
     }
 

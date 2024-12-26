@@ -111,6 +111,12 @@ pub enum Request {
         jsonrpc: JsonRpcVersion,
         params: NotifySemanticTokensParams,
     },
+    Command {
+        jsonrpc: JsonRpcVersion,
+        #[serde(default)]
+        id: Option<RequestId>,
+        params: CommandParams,
+    },
 }
 
 impl Request {
@@ -300,4 +306,11 @@ pub struct SemanticToken {
     pub column: usize,
     pub token_len: usize,
     pub token_type: SemanticTokenType,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CommandParams {
+    pub path: PathBuf,
+    #[serde(default)]
+    pub args: Vec<String>,
 }
