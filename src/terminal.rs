@@ -1,11 +1,9 @@
-use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
-
 pub fn str_cols(s: &str) -> usize {
-    s.width()
+    unicode_width::UnicodeWidthStr::width(s)
 }
 
 pub fn char_cols(c: char) -> usize {
-    c.width().unwrap_or(0)
+    unicode_width::UnicodeWidthChar::width(c).unwrap_or(0)
 }
 
 pub type UnicodeTerminalFrame = tuinix::TerminalFrame<UnicodeCharWidthEstimator>;
