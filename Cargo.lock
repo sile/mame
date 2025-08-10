@@ -18,15 +18,15 @@ dependencies = [
 
 [[package]]
 name = "nojson"
-version = "0.1.3"
+version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8fc252af38a3a531016fb3ddbd98e83f11a03baaf1d136ad59e140b06255a1b7"
+checksum = "65e3fa72cb03854073e16eb51d58461723cd2a2ece63ea78f43371cfadeb3b58"
 
 [[package]]
 name = "tuinix"
-version = "0.2.0"
+version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "91fff680c7c85c9807ee4e5f5bc5f65d60b2b7cb08d77c6e41654d5cfcfa09b1"
+checksum = "67068facab6ee2aff2c66c3249d064c996435cf8f1a8e61db8675571ca4c01ff"
 dependencies = [
  "libc",
 ]

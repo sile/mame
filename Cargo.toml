@@ -10,6 +10,6 @@ repository = "https://github.com/sile/mame"
 readme = "README.md"
 
 [dependencies]
-nojson = "0.1.3"
-tuinix = "0.2.0"
+nojson = "0.3.2"
+tuinix = "0.3.2"
 
