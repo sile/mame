@@ -12,4 +12,5 @@ readme = "README.md"
 [dependencies]
 nojson = "0.3.2"
 tuinix = "0.3.2"
+unicode-width = "0.2.1"
 

@@ -14,6 +14,7 @@ version = "0.0.0"
 dependencies = [
  "nojson",
  "tuinix",
+ "unicode-width",
 ]
 
 [[package]]
@@ -30,3 +31,9 @@ checksum = "67068facab6ee2aff2c66c3249d064c996435cf8f1a8e61db8675571ca4c01ff"
 dependencies = [
  "libc",
 ]
+
+[[package]]
+name = "unicode-width"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4a1a07cc7db3810833284e8d372ccdc6da29741639ecc70c9ec107df0fa6154c"
