@@ -2,8 +2,6 @@ use std::collections::BTreeMap;
 
 use crate::KeyMatcher;
 
-pub trait Action {}
-
 #[derive(Debug, Clone)]
 pub struct KeymapRegistry<T> {
     pub contexts: BTreeMap<String, Keymap<T>>, // TODO: private
@@ -20,7 +18,7 @@ pub struct KeymapManager<T> {
     context: String,
 }
 
-impl<T: Action> KeymapManager<T> {
+impl<T> KeymapManager<T> {
     pub fn new(registry: KeymapRegistry<T>, initial_context: &str) -> Option<Self> {
         Some(Self {
             registry,
