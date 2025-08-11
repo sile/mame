@@ -1,5 +1,7 @@
 use tuinix::{KeyCode, KeyInput};
 
+use crate::VecMap;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum KeyMatcher {
     Literal(KeyInput),
@@ -146,5 +148,20 @@ impl std::fmt::Display for KeyMatcher {
                 }
             }
         }
+    }
+}
+
+impl nojson::DisplayJson for KeyMatcher {
+    fn fmt(&self, f: &mut nojson::JsonFormatter<'_, '_>) -> std::fmt::Result {
+        f.string(self)
+    }
+}
+
+#[derive(Debug, Default, Clone, PartialEq, Eq, Hash)]
+pub struct KeyMatcherLabels(VecMap<KeyMatcher, String>);
+
+impl KeyMatcherLabels {
+    pub fn get_label(&self, k: KeyMatcher) -> String {
+        self.0.get(&k).cloned().unwrap_or_else(|| k.to_string())
     }
 }
