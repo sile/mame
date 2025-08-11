@@ -3,6 +3,7 @@ mod keymatcher;
 mod terminal;
 mod vec_map;
 // TODO: mod legend;
+// TODO: mod external_command;
 
 pub use keybinding::{Keymap, KeymapManager, KeymapRegistry};
 pub use keymatcher::KeyMatcher;
