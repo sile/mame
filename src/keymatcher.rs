@@ -158,9 +158,9 @@ impl nojson::DisplayJson for KeyMatcher {
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Hash)]
-pub struct KeyMatcherLabels(VecMap<KeyMatcher, String>);
+pub struct KeyLabels(VecMap<KeyMatcher, String>);
 
-impl KeyMatcherLabels {
+impl KeyLabels {
     pub fn get_label(&self, k: KeyMatcher) -> String {
         self.0.get(&k).cloned().unwrap_or_else(|| k.to_string())
     }
