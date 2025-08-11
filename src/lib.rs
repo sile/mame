@@ -1,5 +1,5 @@
-mod keybinding;
+mod keymatcher;
 mod terminal;
 
-pub use keybinding::KeyMatcher;
+pub use keymatcher::KeyMatcher;
 pub use terminal::{UnicodeCharWidthEstimator, UnicodeTerminalFrame, char_cols, str_cols};
