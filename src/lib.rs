@@ -4,6 +4,7 @@ mod terminal;
 mod vec_map;
 // TODO: mod legend;
 // TODO: mod external_command;
+// TODO: mod keylabels;
 
 pub use keybinding::{Keymap, KeymapManager, KeymapRegistry};
 pub use keymatcher::KeyMatcher;
