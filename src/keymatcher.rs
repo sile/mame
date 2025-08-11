@@ -165,3 +165,17 @@ impl KeyLabels {
         self.0.get(&k).cloned().unwrap_or_else(|| k.to_string())
     }
 }
+
+impl nojson::DisplayJson for KeyLabels {
+    fn fmt(&self, f: &mut nojson::JsonFormatter<'_, '_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for KeyLabels {
+    type Error = nojson::JsonParseError;
+
+    fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
+        Ok(KeyLabels(value.try_into()?))
+    }
+}
