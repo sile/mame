@@ -1,15 +1,13 @@
-use std::collections::BTreeMap;
-
-use crate::KeyMatcher;
+use crate::{KeyMatcher, VecMap};
 
 #[derive(Debug, Clone)]
 pub struct KeymapRegistry<T> {
-    pub contexts: BTreeMap<String, Keymap<T>>, // TODO: private
+    pub contexts: VecMap<String, Keymap<T>>, // TODO: private
 }
 
 #[derive(Debug, Clone)]
 pub struct Keymap<T> {
-    pub bindings: BTreeMap<KeyMatcher, T>, // TODO: private
+    pub bindings: VecMap<KeyMatcher, T>, // TODO: private
 }
 
 #[derive(Debug, Clone)]
