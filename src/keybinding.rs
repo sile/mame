@@ -3,14 +3,14 @@ use tuinix::{KeyCode, KeyInput};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum KeyMatcher {
     Literal(KeyInput),
-    VisibleChars,
+    PrintableChar,
 }
 
 impl KeyMatcher {
     pub fn matches(self, key: KeyInput) -> bool {
         match self {
             KeyMatcher::Literal(k) => k == key,
-            KeyMatcher::VisibleChars => {
+            KeyMatcher::PrintableChar => {
                 if let KeyInput {
                     ctrl: false,
                     alt: false,
@@ -30,8 +30,8 @@ impl std::str::FromStr for KeyMatcher {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s == "<VISIBLE>" {
-            return Ok(KeyMatcher::VisibleChars);
+        if s == "<PRINTABLE>" {
+            return Ok(KeyMatcher::PrintableChar);
         }
 
         // Handle modifier key combinations like "C-c", "M-x"
@@ -116,7 +116,7 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for KeyMatcher {
 impl std::fmt::Display for KeyMatcher {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::VisibleChars => write!(f, "<VISIBLE>"),
+            Self::PrintableChar => write!(f, "<PRINTABLE>"),
             Self::Literal(key) => {
                 if key.alt {
                     write!(f, "M-")?;
