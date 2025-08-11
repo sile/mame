@@ -1,3 +1,4 @@
+mod keybinding;
 mod keymatcher;
 mod terminal;
 
