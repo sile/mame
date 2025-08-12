@@ -42,6 +42,7 @@ impl nojson::DisplayJson for ExternalCommand {
     }
 }
 
+// TODO: ExternalCommandError, ExternalCommandOutput::{File, String, ...}, AllowStatusCode
 /*
     fn execute_command(&self, buffer: &str) -> orfail::Result<String> {
         let mut cmd = std::process::Command::new(&self.action.command);
