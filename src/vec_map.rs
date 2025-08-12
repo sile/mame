@@ -8,6 +8,14 @@ impl<K, V> VecMap<K, V> {
         Self::default()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
     pub fn insert(&mut self, k: K, v: V) {
         self.0.push((k, v));
     }
