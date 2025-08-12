@@ -3,6 +3,7 @@ mod keymatcher;
 mod terminal;
 mod vec_map;
 // TODO: mod legend;
+// TODO: mod error_dialog or notification_area;
 mod external_command;
 
 pub use external_command::ExternalCommand;

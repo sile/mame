@@ -42,8 +42,19 @@ impl nojson::DisplayJson for ExternalCommand {
     }
 }
 
+// TODO: ShellCommand
+/*
+#[derive(Debug)]
+pub enum ExternalCommandStdio {
+    Null,
+    Text(String),
+    File(PathBuf),
+}
+*/
 // TODO: ExternalCommandError, ExternalCommandOutput::{File, String, ...}, AllowStatusCode
 /*
+{"type": "shell",
+ "command": "echo $MAMEGRE_FILE > $HOME"}
     fn execute_command(&self, buffer: &str) -> orfail::Result<String> {
         let mut cmd = std::process::Command::new(&self.action.command);
         for arg in &self.action.args {
