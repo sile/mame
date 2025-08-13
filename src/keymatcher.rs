@@ -1,6 +1,6 @@
-use tuinix::{KeyCode, KeyInput};
+use std::collections::HashMap;
 
-use crate::VecMap;
+use tuinix::{KeyCode, KeyInput};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum KeyMatcher {
@@ -157,8 +157,8 @@ impl nojson::DisplayJson for KeyMatcher {
     }
 }
 
-#[derive(Debug, Default, Clone, PartialEq, Eq, Hash)]
-pub struct KeyLabels(VecMap<KeyMatcher, String>);
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct KeyLabels(HashMap<KeyMatcher, String>);
 
 impl KeyLabels {
     pub fn get_label(&self, k: KeyMatcher) -> String {
