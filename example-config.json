@@ -8,8 +8,21 @@
         "action": "cancel"
       },
       "C-s": {
-        "action": "search",
-        "enter": "SEARCH"
+        "context": "SEARCH",
+        "action": "search"
+      },
+      "C-f": {
+        "context": "SEARCH",
+        "action": [
+          {
+            "shell": {
+              "command": "rustfmt",
+              "args": [
+                "--edition=2024"
+              ]
+            }
+          }
+        ]
       },
       "<UP>": {
         "label": "↑",
@@ -29,8 +42,8 @@
         "action": "goto-next-hit"
       },
       "C-g": {
-        "action": "cancel",
-        "enter": "MAIN"
+        "context": "MAIN",
+        "action": "cancel"
       }
     }
   }
