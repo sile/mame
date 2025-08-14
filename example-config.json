@@ -1,0 +1,34 @@
+{
+  "keybindings": {
+    "main": {
+      "C-c": {
+        "action": "quit"
+      },
+      "C-g": {
+        "action": "cancel"
+      },
+      "C-s": {
+        "action": "search",
+        "context": "search"
+      },
+      "<UP>": {
+        "label": "↑",
+        "aliases": [
+          "C-p",
+          "C-<LEFT>"
+        ],
+        "hidden": false,
+        "action": "up"
+      }
+    },
+    "search": {
+      "C-c": {
+        "action": "quit"
+      },
+      "C-g": {
+        "action": "cancel",
+        "context": "main"
+      }
+    }
+  }
+}
