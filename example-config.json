@@ -1,6 +1,6 @@
 {
   "keybindings": {
-    "main": {
+    "MAIN": {
       "C-c": {
         "action": "quit"
       },
@@ -9,7 +9,7 @@
       },
       "C-s": {
         "action": "search",
-        "context": "search"
+        "enter": "SEARCH"
       },
       "<UP>": {
         "label": "↑",
@@ -21,13 +21,16 @@
         "action": "up"
       }
     },
-    "search": {
+    "SEARCH": {
       "C-c": {
         "action": "quit"
       },
+      "C-s": {
+        "action": "goto-next-hit"
+      },
       "C-g": {
         "action": "cancel",
-        "context": "main"
+        "enter": "MAIN"
       }
     }
   }
