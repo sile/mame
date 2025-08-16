@@ -1,0 +1,51 @@
+{
+  "setup-actions": [{"type": "hide-legend"}],
+  "keybindings": {
+    // Main context
+    "MAIN": {
+      "C-c": {"actions": [{"type": "quit"}]},
+      "C-g": {"actions": [{"type": "cancel"}]},
+      "C-s": {
+        "actions": [
+          {
+            "type": "enter",
+            "context": "SEARCH"
+          }
+        ]
+      },
+      "C-f": {
+        "actions": [
+          {
+            "type": "shell",
+            "command": "rustfmt",
+            "args": ["--edition=2024"]
+          }
+        ]
+      },
+      "<UP>": {
+        "label": "↑",
+        "aliases": [
+          "C-p",
+          "C-<LEFT>"
+        ],
+        "hidden": false,
+        "actions": [{"type": "up"}]
+      }
+    },
+
+    // Search context
+    "SEARCH": {
+      "C-c": {"actions": [{"type": "quit"}]},
+      "C-s": {"actions": [{"type": "goto-next-hit"}]},
+      "C-g": {
+        "actions": [
+          {"type": "cancel"},
+          {
+            "type": "enter",
+            "context": "MAIN"
+          }
+        ]
+      }
+    }
+  }
+}
