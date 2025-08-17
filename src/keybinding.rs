@@ -1,16 +1,28 @@
 use std::collections::BTreeMap;
 
-use crate::KeyMatcher;
+use crate::{Action, Config, KeyMatcher};
 
 #[derive(Debug, Clone)]
 pub struct KeymapRegistry<A> {
     pub contexts: BTreeMap<String, Keymap<A>>, // TODO: private
 }
 
-impl<'text, 'raw, A> TryFrom<nojson::RawJsonValue<'text, 'raw>> for KeymapRegistry<A>
-where
-    A: TryFrom<nojson::RawJsonValue<'text, 'raw>, Error = nojson::JsonParseError>,
-{
+impl<A: Action> KeymapRegistry<A> {
+    pub(crate) fn validate_actions(
+        &self,
+        value: nojson::RawJsonValue<'_, '_>,
+        config: &Config<A>,
+    ) -> Result<(), nojson::JsonParseError> {
+        for (k, v) in value.to_object().expect("bug") {
+            let context = k.to_unquoted_string_str().expect("bug");
+            let keymap = self.contexts.get(context.as_ref()).expect("bug");
+            keymap.validate_actions(v, config)?;
+        }
+        Ok(())
+    }
+}
+
+impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for KeymapRegistry<A> {
     type Error = nojson::JsonParseError;
 
     fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
@@ -23,6 +35,19 @@ where
 #[derive(Debug, Clone)]
 pub struct Keymap<A> {
     pub bindings: Vec<KeyBinding<A>>,
+}
+
+impl<A: Action> Keymap<A> {
+    fn validate_actions(
+        &self,
+        value: nojson::RawJsonValue<'_, '_>,
+        config: &Config<A>,
+    ) -> Result<(), nojson::JsonParseError> {
+        for ((_k, v), binding) in value.to_object().expect("bug").zip(&self.bindings) {
+            binding.validate_actions(v, config)?;
+        }
+        Ok(())
+    }
 }
 
 impl<'text, 'raw, A> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Keymap<A>
@@ -72,10 +97,15 @@ impl<A> KeyBinding<A> {
                 .to_member("hidden")?
                 .map(TryFrom::try_from)?
                 .unwrap_or_default(),
-            actions: value
-                .to_member("actions")?
-                .map(TryFrom::try_from)?
-                .unwrap_or_default(),
+            actions: value.to_member("actions")?.required()?.try_into()?,
         })
+    }
+
+    fn validate_actions(
+        &self,
+        _value: nojson::RawJsonValue<'_, '_>,
+        _config: &Config<A>,
+    ) -> Result<(), nojson::JsonParseError> {
+        Ok(())
     }
 }

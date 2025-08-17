@@ -1,6 +1,8 @@
 use crate::Config;
 
-pub trait Action: Sized {
+pub trait Action:
+    Sized + for<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>, Error = nojson::JsonParseError>
+{
     fn validate(
         &self,
         value: nojson::RawJsonValue<'_, '_>,

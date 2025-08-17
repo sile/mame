@@ -1,4 +1,4 @@
-use crate::KeymapRegistry;
+use crate::{Action, KeymapRegistry};
 
 #[derive(Debug)]
 pub struct Config<A> {
@@ -21,10 +21,7 @@ impl<A> Config<A> {
     }
 }
 
-impl<'text, 'raw, A> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Config<A>
-where
-    A: TryFrom<nojson::RawJsonValue<'text, 'raw>, Error = nojson::JsonParseError>,
-{
+impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Config<A> {
     type Error = nojson::JsonParseError;
 
     fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
@@ -38,9 +35,14 @@ where
             return Err(context_value.invalid("undefined keybindings context"));
         }
 
-        Ok(Self {
+        let config = Self {
             context,
             keymap_registry,
-        })
+        };
+        config
+            .keymap_registry
+            .validate_actions(keybindings, &config)?;
+
+        Ok(config)
     }
 }
