@@ -15,14 +15,12 @@ impl<T> Config<T> {
     }
 
     pub fn set_context(&mut self, context: &str) -> bool {
-        todo!()
+        // TODO: check if the context exists
+        self.context = context.to_owned();
+        true
     }
 
     pub fn context(&self) -> &str {
-        todo!()
-    }
-
-    pub fn get_entry(&self, key: tuinix::KeyInput) -> Option<&T> {
-        todo!()
+        &self.context
     }
 }

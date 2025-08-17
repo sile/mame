@@ -1,12 +1,11 @@
+use std::collections::BTreeMap;
 use std::path::PathBuf;
-
-use crate::VecMap;
 
 #[derive(Debug, Clone)]
 pub struct ExternalCommand {
     pub command: PathBuf,
     pub args: Vec<String>,
-    pub envs: VecMap<String, String>,
+    pub envs: BTreeMap<String, String>,
 }
 
 impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ExternalCommand {
@@ -21,7 +20,7 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ExternalCommand
                 .unwrap_or_default(),
             envs: value
                 .to_member("envs")?
-                .map(VecMap::try_from)?
+                .map(BTreeMap::try_from)?
                 .unwrap_or_default(),
         })
     }
