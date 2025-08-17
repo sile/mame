@@ -2,7 +2,7 @@ mod config;
 mod keybinding;
 mod keymatcher;
 mod terminal;
-mod vec_map;
+mod vec_map; // TODO: remove(?)
 // TODO: mod legend;
 // TODO: mod error_dialog or notification_area;
 mod external_command;

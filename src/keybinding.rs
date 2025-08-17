@@ -1,13 +1,43 @@
-use crate::{KeyMatcher, VecMap};
+use std::collections::BTreeMap;
+
+use crate::KeyMatcher;
 
 #[derive(Debug, Clone)]
-pub struct KeymapRegistry<T> {
-    pub contexts: VecMap<String, Keymap<T>>, // TODO: private
+pub struct KeymapRegistry<A> {
+    pub contexts: BTreeMap<String, Keymap<A>>, // TODO: private
+}
+
+impl<'text, 'raw, A> TryFrom<nojson::RawJsonValue<'text, 'raw>> for KeymapRegistry<A>
+where
+    A: TryFrom<nojson::RawJsonValue<'text, 'raw>, Error = nojson::JsonParseError>,
+{
+    type Error = nojson::JsonParseError;
+
+    fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
+        Ok(Self {
+            contexts: value.try_into()?,
+        })
+    }
 }
 
 #[derive(Debug, Clone)]
-pub struct Keymap<T> {
-    pub bindings: Vec<KeyBinding<T>>,
+pub struct Keymap<A> {
+    pub bindings: Vec<KeyBinding<A>>,
+}
+
+impl<'text, 'raw, A> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Keymap<A>
+where
+    A: TryFrom<nojson::RawJsonValue<'text, 'raw>, Error = nojson::JsonParseError>,
+{
+    type Error = nojson::JsonParseError;
+
+    fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
+        let mut bindings = Vec::new();
+        for (k, v) in value.to_object()? {
+            bindings.push(KeyBinding::from_json_value(k.try_into()?, v)?);
+        }
+        Ok(Self { bindings })
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -18,14 +48,14 @@ pub struct KeyBinding<A> {
     pub actions: Vec<A>,
 }
 
-impl<A> KeyBinding<A>
-where
-    A: for<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>, Error = nojson::JsonParseError>,
-{
-    pub fn from_json_value(
+impl<A> KeyBinding<A> {
+    pub fn from_json_value<'text, 'raw>(
         primary_key: KeyMatcher,
-        value: nojson::RawJsonValue<'_, '_>,
-    ) -> Result<Self, nojson::JsonParseError> {
+        value: nojson::RawJsonValue<'text, 'raw>,
+    ) -> Result<Self, nojson::JsonParseError>
+    where
+        A: TryFrom<nojson::RawJsonValue<'text, 'raw>, Error = nojson::JsonParseError>,
+    {
         let mut keys = vec![primary_key];
         if let Some(aliases) = value.to_member("aliases")?.get() {
             for alias_key in aliases.to_array()? {
