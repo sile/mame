@@ -1,5 +1,7 @@
 {
-  "setup-actions": [{"type": "hide-legend"}],
+  "setup": {
+    "actions": [{"type": "hide-legend"}]
+  },
   "keybindings": {
     // Main context
     "MAIN": {
@@ -36,7 +38,7 @@
     // Search context
     "SEARCH": {
       "C-c": {"actions": [{"type": "quit"}]},
-      "C-s": {"actions": [{"type": "goto-next-hit"}]},
+      "C-s": {"label": "next", "actions": [{"type": "goto-next-hit"}]},
       "C-g": {
         "actions": [
           {"type": "cancel"},

@@ -1,9 +1,8 @@
-use crate::{KeyLabels, KeymapRegistry};
+use crate::KeymapRegistry;
 
 #[derive(Debug)]
 pub struct Config<T> {
     pub keybindings: KeymapRegistry<T>, // TODO: private
-    pub keylabels: KeyLabels,           // TODO: private
 }
 
 impl<T> Config<T> {

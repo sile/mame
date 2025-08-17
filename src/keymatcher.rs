@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use tuinix::{KeyCode, KeyInput};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -154,28 +152,5 @@ impl std::fmt::Display for KeyMatcher {
 impl nojson::DisplayJson for KeyMatcher {
     fn fmt(&self, f: &mut nojson::JsonFormatter<'_, '_>) -> std::fmt::Result {
         f.string(self)
-    }
-}
-
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
-pub struct KeyLabels(HashMap<KeyMatcher, String>);
-
-impl KeyLabels {
-    pub fn get_label(&self, k: KeyMatcher) -> String {
-        self.0.get(&k).cloned().unwrap_or_else(|| k.to_string())
-    }
-}
-
-impl nojson::DisplayJson for KeyLabels {
-    fn fmt(&self, f: &mut nojson::JsonFormatter<'_, '_>) -> std::fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for KeyLabels {
-    type Error = nojson::JsonParseError;
-
-    fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
-        Ok(KeyLabels(value.try_into()?))
     }
 }
