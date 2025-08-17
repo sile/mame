@@ -7,7 +7,46 @@ pub struct KeymapRegistry<T> {
 
 #[derive(Debug, Clone)]
 pub struct Keymap<T> {
-    pub bindings: VecMap<KeyMatcher, T>, // TODO: private
+    pub bindings: VecMap<KeyMatcher, KeyBinding<T>>,
+}
+
+#[derive(Debug, Clone)]
+pub struct KeyBinding<A> {
+    pub key: KeyMatcher,
+    pub aliases: Vec<KeyMatcher>,
+    pub label: String,
+    pub hidden: bool,
+    pub actions: Vec<A>,
+}
+
+impl<A> KeyBinding<A>
+where
+    A: for<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>, Error = nojson::JsonParseError>,
+{
+    pub fn from_json_value(
+        key: KeyMatcher,
+        value: nojson::RawJsonValue<'_, '_>,
+    ) -> Result<Self, nojson::JsonParseError> {
+        Ok(Self {
+            key,
+            aliases: value
+                .to_member("aliases")?
+                .map(TryFrom::try_from)?
+                .unwrap_or_default(),
+            label: value
+                .to_member("label")?
+                .map(TryFrom::try_from)?
+                .unwrap_or_else(|| key.to_string()),
+            hidden: value
+                .to_member("hidden")?
+                .map(TryFrom::try_from)?
+                .unwrap_or_default(),
+            actions: value
+                .to_member("actions")?
+                .map(TryFrom::try_from)?
+                .unwrap_or_default(),
+        })
+    }
 }
 
 #[derive(Debug, Clone)]
