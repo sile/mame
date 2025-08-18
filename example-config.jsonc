@@ -6,7 +6,10 @@
   "keybindings": {
     // Main context
     "MAIN": {
-      "C-c": {"actions": [{"type": "quit"}]},
+      "C-c": {
+        "label": "C-c quit",
+        "actions": [{"type": "quit"}]
+      },
       "C-g": {"actions": [{"type": "cancel"}]},
       "C-s": {
         "actions": [

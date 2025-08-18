@@ -39,13 +39,10 @@ pub struct Keymap<A> {
 }
 
 impl<A: Action> Keymap<A> {
-    pub fn get_actions(&self, key: tuinix::KeyInput) -> Option<&[A]> {
-        self.bindings.iter().find_map(|b| {
-            b.keys
-                .iter()
-                .any(|k| k.matches(key))
-                .then_some(b.actions.as_slice())
-        })
+    pub fn get_binding(&self, key: tuinix::KeyInput) -> Option<&Keybinding<A>> {
+        self.bindings
+            .iter()
+            .find(|b| b.keys.iter().any(|k| k.matches(key)))
     }
 
     pub fn bindings(&self) -> impl '_ + Iterator<Item = &Keybinding<A>> {
@@ -78,14 +75,13 @@ impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Keym
 
 #[derive(Debug, Clone)]
 pub struct Keybinding<A> {
-    pub keys: Vec<KeyMatcher>,
-    pub label: String,
-    pub hidden: bool,
+    keys: Vec<KeyMatcher>,
+    pub label: Option<String>,
     pub actions: Vec<A>,
 }
 
 impl<A: Action> Keybinding<A> {
-    pub fn from_json_value<'text, 'raw>(
+    fn from_json_value<'text, 'raw>(
         primary_key: KeyMatcher,
         value: nojson::RawJsonValue<'text, 'raw>,
     ) -> Result<Self, nojson::JsonParseError> {
@@ -97,14 +93,7 @@ impl<A: Action> Keybinding<A> {
         }
         Ok(Self {
             keys,
-            label: value
-                .to_member("label")?
-                .map(TryFrom::try_from)?
-                .unwrap_or_else(|| primary_key.to_string()),
-            hidden: value
-                .to_member("hidden")?
-                .map(TryFrom::try_from)?
-                .unwrap_or_default(),
+            label: value.to_member("label")?.map(TryFrom::try_from)?,
             actions: value.to_member("actions")?.required()?.try_into()?,
         })
     }
