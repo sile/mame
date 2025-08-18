@@ -35,7 +35,7 @@ impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Keym
 
 #[derive(Debug, Clone)]
 pub struct Keymap<A> {
-    pub bindings: Vec<KeyBinding<A>>,
+    bindings: Vec<Keybinding<A>>,
 }
 
 impl<A: Action> Keymap<A> {
@@ -57,21 +57,21 @@ impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Keym
     fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
         let mut bindings = Vec::new();
         for (k, v) in value.to_object()? {
-            bindings.push(KeyBinding::from_json_value(k.try_into()?, v)?);
+            bindings.push(Keybinding::from_json_value(k.try_into()?, v)?);
         }
         Ok(Self { bindings })
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct KeyBinding<A> {
+pub struct Keybinding<A> {
     pub keys: Vec<KeyMatcher>,
     pub label: String,
     pub hidden: bool,
     pub actions: Vec<A>,
 }
 
-impl<A: Action> KeyBinding<A> {
+impl<A: Action> Keybinding<A> {
     pub fn from_json_value<'text, 'raw>(
         primary_key: KeyMatcher,
         value: nojson::RawJsonValue<'text, 'raw>,
