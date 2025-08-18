@@ -1,5 +1,7 @@
+use std::path::Path;
+
 use crate::keybinding::KeymapRegistry;
-use crate::{Action, Keymap};
+use crate::{Action, Keymap, LoadJsonFileError};
 
 #[derive(Debug)]
 pub struct Config<A> {
@@ -7,7 +9,11 @@ pub struct Config<A> {
     keymap_registry: KeymapRegistry<A>,
 }
 
-impl<A> Config<A> {
+impl<A: Action> Config<A> {
+    pub fn load_file<P: AsRef<Path>>(path: P) -> Result<Self, LoadJsonFileError> {
+        crate::json::load_jsonc_file(path, |v| Config::try_from(v))
+    }
+
     pub fn set_current_context(&mut self, context: &str) -> bool {
         if self.keymap_registry.contexts.contains_key(context) {
             self.context = context.to_owned();
