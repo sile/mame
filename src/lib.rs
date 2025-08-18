@@ -5,6 +5,7 @@ mod keymatcher;
 mod terminal;
 // TODO: mod legend;
 // TODO: mod error_dialog or notification_area;
+// TODO: mod json (for error message)
 mod external_command;
 
 pub use action::Action;

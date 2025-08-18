@@ -9,7 +9,7 @@ pub struct KeymapRegistry<A> {
 }
 
 impl<A: Action> KeymapRegistry<A> {
-    pub(crate) fn validate_actions(
+    pub fn validate_actions(
         &self,
         value: nojson::RawJsonValue<'_, '_>,
         config: &Config<A>,
@@ -39,6 +39,19 @@ pub struct Keymap<A> {
 }
 
 impl<A: Action> Keymap<A> {
+    pub fn get_actions(&self, key: tuinix::KeyInput) -> Option<&[A]> {
+        self.bindings.iter().find_map(|b| {
+            b.keys
+                .iter()
+                .any(|k| k.matches(key))
+                .then_some(b.actions.as_slice())
+        })
+    }
+
+    pub fn bindings(&self) -> impl '_ + Iterator<Item = &Keybinding<A>> {
+        self.bindings.iter()
+    }
+
     fn validate_actions(
         &self,
         value: nojson::RawJsonValue<'_, '_>,
