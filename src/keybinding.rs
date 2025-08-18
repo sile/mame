@@ -13,8 +13,8 @@ impl<A: Action> KeymapRegistry<A> {
         value: nojson::RawJsonValue<'_, '_>,
         config: &Config<A>,
     ) -> Result<(), nojson::JsonParseError> {
-        for (k, v) in value.to_object().expect("bug") {
-            let context = k.to_unquoted_string_str().expect("bug");
+        for (k, v) in value.to_object()? {
+            let context = k.to_unquoted_string_str()?;
             let keymap = self.contexts.get(context.as_ref()).expect("bug");
             keymap.validate_actions(v, config)?;
         }
@@ -50,10 +50,7 @@ impl<A: Action> Keymap<A> {
     }
 }
 
-impl<'text, 'raw, A> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Keymap<A>
-where
-    A: TryFrom<nojson::RawJsonValue<'text, 'raw>, Error = nojson::JsonParseError>,
-{
+impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Keymap<A> {
     type Error = nojson::JsonParseError;
 
     fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
@@ -73,14 +70,11 @@ pub struct KeyBinding<A> {
     pub actions: Vec<A>,
 }
 
-impl<A> KeyBinding<A> {
+impl<A: Action> KeyBinding<A> {
     pub fn from_json_value<'text, 'raw>(
         primary_key: KeyMatcher,
         value: nojson::RawJsonValue<'text, 'raw>,
-    ) -> Result<Self, nojson::JsonParseError>
-    where
-        A: TryFrom<nojson::RawJsonValue<'text, 'raw>, Error = nojson::JsonParseError>,
-    {
+    ) -> Result<Self, nojson::JsonParseError> {
         let mut keys = vec![primary_key];
         if let Some(aliases) = value.to_member("aliases")?.get() {
             for alias_key in aliases.to_array()? {
@@ -103,9 +97,16 @@ impl<A> KeyBinding<A> {
 
     fn validate_actions(
         &self,
-        _value: nojson::RawJsonValue<'_, '_>,
-        _config: &Config<A>,
+        value: nojson::RawJsonValue<'_, '_>,
+        config: &Config<A>,
     ) -> Result<(), nojson::JsonParseError> {
+        for (action, value) in self
+            .actions
+            .iter()
+            .zip(value.to_member("actions")?.required()?.to_array()?)
+        {
+            action.validate(value, config)?;
+        }
         Ok(())
     }
 }
