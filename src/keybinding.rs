@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 
-use crate::{Action, Config, KeyMatcher};
+use crate::keymatcher::KeyMatcher;
+use crate::{Action, Config};
 
 #[derive(Debug, Clone)]
 pub struct KeymapRegistry<A> {

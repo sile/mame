@@ -1,13 +1,14 @@
-use crate::{Action, KeymapRegistry};
+use crate::keybinding::KeymapRegistry;
+use crate::{Action, Keymap};
 
 #[derive(Debug)]
 pub struct Config<A> {
-    pub context: String,
-    pub keymap_registry: KeymapRegistry<A>, // TODO: private
+    context: String,
+    keymap_registry: KeymapRegistry<A>,
 }
 
 impl<A> Config<A> {
-    pub fn set_context(&mut self, context: &str) -> bool {
+    pub fn set_current_context(&mut self, context: &str) -> bool {
         if self.keymap_registry.contexts.contains_key(context) {
             self.context = context.to_owned();
             true
@@ -16,8 +17,19 @@ impl<A> Config<A> {
         }
     }
 
-    pub fn context(&self) -> &str {
+    pub fn current_context(&self) -> &str {
         &self.context
+    }
+
+    pub fn current_keymap(&self) -> &Keymap<A> {
+        &self.keymap_registry.contexts[&self.context]
+    }
+
+    pub fn keymaps(&self) -> impl '_ + Iterator<Item = (&str, &Keymap<A>)> {
+        self.keymap_registry
+            .contexts
+            .iter()
+            .map(|(k, v)| (k.as_str(), v))
     }
 }
 
