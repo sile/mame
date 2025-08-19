@@ -37,43 +37,15 @@ impl std::fmt::Display for LoadJsonFileError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         match self {
             LoadJsonFileError::Io { path, error } => {
-                write!(f, "failed to read file '{}': {}", path.display(), error)
+                write!(f, "failed to read file '{}': {error}", path.display())
             }
             LoadJsonFileError::Json { path, error, text } => {
-                let (line_num, column_num) = error
-                    .get_line_and_column_numbers(text)
-                    .unwrap_or((std::num::NonZeroUsize::MIN, std::num::NonZeroUsize::MIN));
-
-                let line = error.get_line(text).unwrap_or("");
-
-                let prev_line = if line_num.get() == 1 {
-                    None
-                } else {
-                    text.lines().nth(line_num.get() - 2)
-                };
-
-                let (display_line, display_column) =
-                    format_line_around_position(line, column_num.get());
-                let prev_display_line = prev_line.map(|prev| {
-                    let (truncated, _) = format_line_around_position(prev, column_num.get());
-                    truncated
-                });
-
                 write!(
                     f,
-                    "failed to parse JSON from file '{}': {}\n\nINPUT:{}\n{:4} |{}\n|{:>column$} error",
+                    "failed to parse JSON from file '{}': {error}",
                     path.display(),
-                    error,
-                    if let Some(prev) = prev_display_line {
-                        format!("\n     |{prev}")
-                    } else {
-                        "".to_owned()
-                    },
-                    line_num,
-                    display_line,
-                    "^",
-                    column = display_column
-                )
+                )?;
+                write!(f, "{}", format_json_error_context(error, text))
             }
         }
     }
@@ -87,6 +59,39 @@ impl std::error::Error for LoadJsonFileError {
             None
         }
     }
+}
+
+fn format_json_error_context(error: &nojson::JsonParseError, text: &str) -> String {
+    let (line_num, column_num) = error
+        .get_line_and_column_numbers(text)
+        .unwrap_or((std::num::NonZeroUsize::MIN, std::num::NonZeroUsize::MIN));
+
+    let line = error.get_line(text).unwrap_or("");
+
+    let prev_line = if line_num.get() == 1 {
+        None
+    } else {
+        text.lines().nth(line_num.get() - 2)
+    };
+
+    let (display_line, display_column) = format_line_around_position(line, column_num.get());
+    let prev_display_line = prev_line.map(|prev| {
+        let (truncated, _) = format_line_around_position(prev, column_num.get());
+        truncated
+    });
+
+    format!(
+        "\n\nINPUT:{}\n{:4} |{}\n|{:>column$} error",
+        if let Some(prev) = prev_display_line {
+            format!("\n     |{prev}")
+        } else {
+            "".to_owned()
+        },
+        line_num,
+        display_line,
+        "^",
+        column = display_column
+    )
 }
 
 fn format_line_around_position(line: &str, column_pos: usize) -> (String, usize) {
