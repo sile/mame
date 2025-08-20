@@ -50,18 +50,13 @@ pub enum LoadJsonFileError {
 }
 
 impl std::fmt::Display for LoadJsonFileError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             LoadJsonFileError::Io { path, error } => {
                 write!(f, "failed to read file '{}': {error}", path.display())
             }
             LoadJsonFileError::Json { path, error, text } => {
-                write!(
-                    f,
-                    "failed to parse JSON from file '{}': {error}",
-                    path.display(),
-                )?;
-                write!(f, "{}", format_json_error_context(error, text))
+                format_json_error(f, path, error, text)
             }
         }
     }
@@ -77,7 +72,12 @@ impl std::error::Error for LoadJsonFileError {
     }
 }
 
-fn format_json_error_context(error: &nojson::JsonParseError, text: &str) -> String {
+fn format_json_error(
+    f: &mut std::fmt::Formatter<'_>,
+    path: &Path,
+    error: &nojson::JsonParseError,
+    text: &str,
+) -> std::fmt::Result {
     let (line_num, column_num) = error
         .get_line_and_column_numbers(text)
         .unwrap_or((std::num::NonZeroUsize::MIN, std::num::NonZeroUsize::MIN));
@@ -95,19 +95,14 @@ fn format_json_error_context(error: &nojson::JsonParseError, text: &str) -> Stri
         let (truncated, _) = format_line_around_position(prev, column_num.get());
         truncated
     });
-
-    format!(
-        "\n\nINPUT:{}\n{:4} |{}\n|{:>column$} error",
-        if let Some(prev) = prev_display_line {
-            format!("\n     |{prev}")
-        } else {
-            "".to_owned()
-        },
-        line_num,
-        display_line,
-        "^",
-        column = display_column
-    )
+    writeln!(f, "{error}")?;
+    writeln!(f, "--> {}:{line_num}:{column_num}", path.display())?;
+    if let Some(prev) = prev_display_line {
+        writeln!(f, "     |{prev}")?;
+    }
+    writeln!(f, "{line_num:4} |{display_line}")?;
+    writeln!(f, "     |{:>column$} error", "^", column = display_column)?;
+    Ok(())
 }
 
 fn format_line_around_position(line: &str, column_pos: usize) -> (String, usize) {
