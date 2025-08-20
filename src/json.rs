@@ -10,7 +10,7 @@ where
         path: path.as_ref().to_path_buf(),
         error: e,
     })?;
-    let value = nojson::RawJson::parse(&text)
+    let value = nojson::RawJson::parse_jsonc(&text)
         .and_then(|json| f(json.value()))
         .map_err(|e| LoadJsonFileError::Json {
             path: path.as_ref().to_path_buf(),
@@ -26,7 +26,7 @@ where
         nojson::RawJsonValue<'text, 'raw>,
     ) -> Result<T, nojson::JsonParseError>,
 {
-    let value = nojson::RawJson::parse(&text)
+    let value = nojson::RawJson::parse_jsonc(&text)
         .and_then(|json| f(json.value()))
         .map_err(|e| LoadJsonFileError::Json {
             path: PathBuf::from(name),
