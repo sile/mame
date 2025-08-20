@@ -54,7 +54,7 @@ impl<A: Action> Keymap<A> {
         value: nojson::RawJsonValue<'_, '_>,
         config: &Config<A>,
     ) -> Result<(), nojson::JsonParseError> {
-        for ((_k, v), binding) in value.to_object().expect("bug").zip(&self.bindings) {
+        for (v, binding) in value.to_array().expect("bug").zip(&self.bindings) {
             binding.validate_actions(v, config)?;
         }
         Ok(())
