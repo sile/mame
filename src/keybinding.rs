@@ -65,11 +65,9 @@ impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Keym
     type Error = nojson::JsonParseError;
 
     fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
-        let mut bindings = Vec::new();
-        for (k, v) in value.to_object()? {
-            bindings.push(Keybinding::from_json_value(k.try_into()?, v)?);
-        }
-        Ok(Self { bindings })
+        Ok(Self {
+            bindings: value.try_into()?,
+        })
     }
 }
 
@@ -81,23 +79,6 @@ pub struct Keybinding<A> {
 }
 
 impl<A: Action> Keybinding<A> {
-    fn from_json_value<'text, 'raw>(
-        primary_key: KeyMatcher,
-        value: nojson::RawJsonValue<'text, 'raw>,
-    ) -> Result<Self, nojson::JsonParseError> {
-        let mut keys = vec![primary_key];
-        if let Some(aliases) = value.to_member("aliases")?.get() {
-            for alias_key in aliases.to_array()? {
-                keys.push(alias_key.try_into()?);
-            }
-        }
-        Ok(Self {
-            keys,
-            label: value.to_member("label")?.map(TryFrom::try_from)?,
-            actions: value.to_member("actions")?.required()?.try_into()?,
-        })
-    }
-
     fn validate_actions(
         &self,
         value: nojson::RawJsonValue<'_, '_>,
@@ -111,5 +92,17 @@ impl<A: Action> Keybinding<A> {
             action.validate(value, config)?;
         }
         Ok(())
+    }
+}
+
+impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Keybinding<A> {
+    type Error = nojson::JsonParseError;
+
+    fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
+        Ok(Self {
+            keys: value.to_member("keys")?.required()?.try_into()?,
+            label: value.to_member("label")?.map(TryFrom::try_from)?,
+            actions: value.to_member("actions")?.required()?.try_into()?,
+        })
     }
 }
