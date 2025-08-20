@@ -14,3 +14,6 @@ pub use external_command::ExternalCommand;
 pub use json::LoadJsonFileError;
 pub use keybinding::{Keybinding, Keymap};
 pub use terminal::{UnicodeCharWidthEstimator, UnicodeTerminalFrame, char_cols, str_cols};
+
+// TODO: delete
+pub use keymatcher::KeyMatcher;
