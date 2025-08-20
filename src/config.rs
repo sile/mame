@@ -14,6 +14,10 @@ impl<A: Action> Config<A> {
         crate::json::load_jsonc_file(path, |v| Config::try_from(v))
     }
 
+    pub fn load_str(name: &str, text: &str) -> Result<Self, LoadJsonFileError> {
+        crate::json::load_jsonc_str(name, text, |v| Config::try_from(v))
+    }
+
     pub fn set_current_context(&mut self, context: &str) -> bool {
         if self.keymap_registry.contexts.contains_key(context) {
             self.context = context.to_owned();

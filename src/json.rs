@@ -20,6 +20,22 @@ where
     Ok(value)
 }
 
+pub fn load_jsonc_str<F, T>(name: &str, text: &str, f: F) -> Result<T, LoadJsonFileError>
+where
+    F: for<'text, 'raw> FnOnce(
+        nojson::RawJsonValue<'text, 'raw>,
+    ) -> Result<T, nojson::JsonParseError>,
+{
+    let value = nojson::RawJson::parse(&text)
+        .and_then(|json| f(json.value()))
+        .map_err(|e| LoadJsonFileError::Json {
+            path: PathBuf::from(name),
+            text: text.to_owned(),
+            error: e,
+        })?;
+    Ok(value)
+}
+
 #[derive(Debug)]
 pub enum LoadJsonFileError {
     Io {
