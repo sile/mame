@@ -11,7 +11,7 @@ where
         error: e,
     })?;
     let value = nojson::RawJson::parse_jsonc(&text)
-        .and_then(|json| f(json.value()))
+        .and_then(|(json, _)| f(json.value()))
         .map_err(|e| LoadJsonFileError::Json {
             path: path.as_ref().to_path_buf(),
             text: text.clone(),
@@ -27,7 +27,7 @@ where
     ) -> Result<T, nojson::JsonParseError>,
 {
     let value = nojson::RawJson::parse_jsonc(&text)
-        .and_then(|json| f(json.value()))
+        .and_then(|(json, _)| f(json.value()))
         .map_err(|e| LoadJsonFileError::Json {
             path: PathBuf::from(name),
             text: text.to_owned(),
