@@ -77,7 +77,7 @@ impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Keym
 pub struct Keybinding<A> {
     keys: Vec<KeyMatcher>,
     pub label: Option<String>,
-    pub actions: Vec<A>,
+    pub actions: Vec<A>, // TODO: Wrap by Arc
 }
 
 impl<A: Action> Keybinding<A> {
