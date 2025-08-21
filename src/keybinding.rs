@@ -75,7 +75,7 @@ impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Keym
 pub struct Keybinding<A> {
     keys: Vec<KeyMatcher>,
     pub label: Option<String>,
-    pub actions: Vec<A>, // TODO: Wrap by Arc
+    pub action: A,
 }
 
 impl<A: Action> Keybinding<A> {
@@ -84,13 +84,7 @@ impl<A: Action> Keybinding<A> {
         value: nojson::RawJsonValue<'_, '_>,
         config: &Config<A>,
     ) -> Result<(), nojson::JsonParseError> {
-        for (action, value) in self
-            .actions
-            .iter()
-            .zip(value.to_member("actions")?.required()?.to_array()?)
-        {
-            action.validate(value, config)?;
-        }
+        // TODO
         Ok(())
     }
 }
@@ -102,7 +96,7 @@ impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Keyb
         Ok(Self {
             keys: value.to_member("keys")?.required()?.try_into()?,
             label: value.to_member("label")?.map(TryFrom::try_from)?,
-            actions: value.to_member("actions")?.required()?.try_into()?,
+            action: value.to_member("action")?.required()?.try_into()?,
         })
     }
 }
