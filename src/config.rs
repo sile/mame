@@ -35,6 +35,10 @@ impl<A: Action> Config<A> {
         &self.keymap_registry.contexts[&self.context]
     }
 
+    pub fn get_keymap(&self, context: &str) -> Option<&Keymap<A>> {
+        self.keymap_registry.contexts.get(context)
+    }
+
     pub fn keymaps(&self) -> impl '_ + Iterator<Item = (&str, &Keymap<A>)> {
         self.keymap_registry
             .contexts
@@ -61,9 +65,7 @@ impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Conf
             context,
             keymap_registry,
         };
-        config
-            .keymap_registry
-            .validate_actions(keybindings, &config)?;
+        config.keymap_registry.validate(keybindings, &config)?;
 
         Ok(config)
     }

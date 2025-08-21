@@ -9,7 +9,7 @@ pub struct KeymapRegistry<A> {
 }
 
 impl<A: Action> KeymapRegistry<A> {
-    pub fn validate_actions(
+    pub fn validate(
         &self,
         value: nojson::RawJsonValue<'_, '_>,
         config: &Config<A>,
@@ -17,7 +17,7 @@ impl<A: Action> KeymapRegistry<A> {
         for (k, v) in value.to_object()? {
             let context = k.to_unquoted_string_str()?;
             let keymap = self.contexts.get(context.as_ref()).expect("bug");
-            keymap.validate_actions(v, config)?;
+            keymap.validate(v, config)?;
         }
         Ok(())
     }
@@ -49,13 +49,13 @@ impl<A: Action> Keymap<A> {
         self.bindings.iter()
     }
 
-    fn validate_actions(
+    fn validate(
         &self,
         value: nojson::RawJsonValue<'_, '_>,
         config: &Config<A>,
     ) -> Result<(), nojson::JsonParseError> {
         for (v, binding) in value.to_array().expect("bug").zip(&self.bindings) {
-            binding.validate_actions(v, config)?;
+            binding.validate(v, config)?;
         }
         Ok(())
     }
@@ -75,16 +75,24 @@ impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Keym
 pub struct Keybinding<A> {
     keys: Vec<KeyMatcher>,
     pub label: Option<String>,
-    pub action: A,
+    pub action: Option<A>,
+    pub context: Option<String>,
 }
 
 impl<A: Action> Keybinding<A> {
-    fn validate_actions(
+    fn validate(
         &self,
         value: nojson::RawJsonValue<'_, '_>,
         config: &Config<A>,
     ) -> Result<(), nojson::JsonParseError> {
-        // TODO
+        if let Some(context) = &self.context
+            && config.get_keymap(context).is_none()
+        {
+            return Err(value
+                .to_member("context")?
+                .required()?
+                .invalid("undefined context"));
+        }
         Ok(())
     }
 }
@@ -96,7 +104,8 @@ impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Keyb
         Ok(Self {
             keys: value.to_member("keys")?.required()?.try_into()?,
             label: value.to_member("label")?.map(TryFrom::try_from)?,
-            action: value.to_member("action")?.required()?.try_into()?,
+            action: value.to_member("action")?.map(TryFrom::try_from)?,
+            context: value.to_member("context")?.map(TryFrom::try_from)?,
         })
     }
 }
