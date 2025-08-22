@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 pub fn load_jsonc_file<P: AsRef<Path>, F, T>(path: P, f: F) -> Result<T, LoadJsonFileError>
@@ -130,4 +131,68 @@ fn format_line_around_position(line: &str, column_pos: usize) -> (String, usize)
     }
 
     (result, new_column_pos)
+}
+
+#[derive(Debug)]
+pub struct VariableResolver<'text, 'raw> {
+    pub definitions: HashMap<String, VariableDefinition<'text, 'raw>>,
+    //pub references:BTreeMap<usize,
+}
+
+impl<'text, 'raw> VariableResolver<'text, 'raw> {
+    /*
+        pub fn contains_ref(&self, value: nojson::RawJsonValue<'text, 'raw>) -> bool {
+            match value.kind() {
+                nojson::JsonValueKind::Null
+                | nojson::JsonValueKind::Boolean
+                | nojson::JsonValueKind::Integer
+                | nojson::JsonValueKind::Float
+                | nojson::JsonValueKind::String => false,
+                nojson::JsonValueKind::Array => value
+                    .to_array()
+                    .expect("infallible")
+                    .any(|v| self.contains_ref(v)),
+                nojson::JsonValueKind::Object => {
+                    if let Some(v) = value.to_member("ref").expect("infallible").get() {}
+                }
+            }
+        }
+    */
+    /*
+        pub fn resolve(
+            &self,
+            value: nojson::RawJsonValue<'text, 'raw>,
+        ) -> Option<nojson::RawJsonOwned> {
+            let mut resolved = String::new();
+            if sefl.resolve_value(value, &mut resolved) {
+                Some(resolved)
+            } else {
+                None
+            }
+        }
+
+        fn resolve_value(
+            &self,
+            _value: nojson::RawJsonValue<'text, 'raw>,
+            _resolved: &mut String,
+        ) -> bool {
+            /*
+                        match value.kind() {
+                            nojson::JsonValueKind::Null => false,
+                        }
+            */
+            todo!()
+        }
+    */
+}
+
+#[derive(Debug)]
+pub enum VariableDefinition<'text, 'raw> {
+    Const {
+        value: nojson::RawJsonValue<'text, 'raw>,
+    },
+    Env {
+        default: Option<nojson::RawJsonValue<'text, 'raw>>,
+        is_json: bool,
+    },
 }
