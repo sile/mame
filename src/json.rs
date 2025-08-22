@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
 
 pub fn load_jsonc_file<P: AsRef<Path>, F, T>(path: P, f: F) -> Result<T, LoadJsonFileError>
@@ -134,10 +134,34 @@ fn format_line_around_position(line: &str, column_pos: usize) -> (String, usize)
     (result, new_column_pos)
 }
 
+fn collect_references<'text, 'raw>(
+    value: nojson::RawJsonValue<'text, 'raw>,
+    references: &mut BTreeMap<usize, nojson::RawJsonValue<'text, 'raw>>,
+) -> Result<(), nojson::JsonParseError> {
+    todo!()
+}
+
 #[derive(Debug)]
 pub struct VariableResolver<'text, 'raw> {
     pub definitions: HashMap<String, VariableDefinition<'text, 'raw>>,
-    //pub references:BTreeMap<usize,
+    pub references: BTreeMap<usize, nojson::RawJsonValue<'text, 'raw>>,
+}
+
+impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for VariableResolver<'text, 'raw> {
+    type Error = nojson::JsonParseError;
+
+    fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
+        let definitions = value
+            .to_member("variables")?
+            .map(TryFrom::try_from)?
+            .unwrap_or_default();
+        let mut references = BTreeMap::new();
+        collect_references(value, &mut references)?;
+        Ok(Self {
+            definitions,
+            references,
+        })
+    }
 }
 
 impl<'text, 'raw> VariableResolver<'text, 'raw> {
