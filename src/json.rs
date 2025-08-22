@@ -37,6 +37,7 @@ where
     Ok(value)
 }
 
+// TODO: Support nest for resolver
 #[derive(Debug)]
 pub enum LoadJsonFileError {
     Io {
@@ -195,4 +196,25 @@ pub enum VariableDefinition<'text, 'raw> {
         default: Option<nojson::RawJsonValue<'text, 'raw>>,
         is_json: bool,
     },
+}
+
+impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for VariableDefinition<'text, 'raw> {
+    type Error = nojson::JsonParseError;
+
+    fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
+        let ty = value.to_member("type")?.required()?;
+        match ty.to_unquoted_string_str()?.as_ref() {
+            "const" => Ok(Self::Const {
+                value: value.to_member("value")?.required()?,
+            }),
+            "env" => Ok(Self::Env {
+                default: value.to_member("default")?.get(),
+                is_json: value
+                    .to_member("is_json")?
+                    .map(bool::try_from)?
+                    .unwrap_or_default(),
+            }),
+            _ => Err(ty.invalid("unknown variable type")),
+        }
+    }
 }
