@@ -211,17 +211,42 @@ impl<'text, 'raw> VariableResolver<'text, 'raw> {
         Ok(self.resolved)
     }
 
+    fn resolve_const(
+        &mut self,
+        value: nojson::RawJsonValue<'text, 'raw>,
+    ) -> Result<(), nojson::JsonParseError> {
+        todo!("{}", value.as_raw_str())
+    }
+
+    fn resolve_env(
+        &mut self,
+        name: &str,
+        default: Option<nojson::RawJsonValue<'text, 'raw>>,
+        is_json: bool,
+    ) -> Result<(), nojson::JsonParseError> {
+        todo!("name: {name}")
+    }
+
     fn resolve_value(
         &mut self,
         value: nojson::RawJsonValue<'text, 'raw>,
     ) -> Result<(), nojson::JsonParseError> {
-        if let Some(r) = self.references.remove(&value.position()) {
-            todo!();
+        let end_position = value.position() + value.as_raw_str().len();
+        if let Some(variable_name) = self.references.remove(&value.position()) {
+            let def = self.definitions[&variable_name];
+            if value.position() < def.position() {
+                return Err(value.invalid("variable reference appears before its definition"));
+            }
+            match def {
+                VariableDefinition::Const { value, .. } => self.resolve_const(value)?,
+                VariableDefinition::Env {
+                    default, is_json, ..
+                } => self.resolve_env(&variable_name, default, is_json)?,
+            }
         } else if !self.contains_ref(value) {
             let end_position = value.position() + value.as_raw_str().len();
             self.resolved
                 .push_str(&self.json.text()[self.last_position..end_position]);
-            self.last_position = end_position;
         } else if let Ok(array) = value.to_array() {
             for value in array {
                 self.resolve_value(value)?;
@@ -233,6 +258,7 @@ impl<'text, 'raw> VariableResolver<'text, 'raw> {
         } else {
             panic!("bug");
         }
+        self.last_position = end_position;
         Ok(())
     }
 
@@ -245,15 +271,25 @@ impl<'text, 'raw> VariableResolver<'text, 'raw> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum VariableDefinition<'text, 'raw> {
     Const {
+        position: usize,
         value: nojson::RawJsonValue<'text, 'raw>,
     },
     Env {
+        position: usize,
         default: Option<nojson::RawJsonValue<'text, 'raw>>,
         is_json: bool,
     },
+}
+
+impl<'text, 'raw> VariableDefinition<'text, 'raw> {
+    fn position(self) -> usize {
+        match self {
+            Self::Const { position, .. } | Self::Env { position, .. } => position,
+        }
+    }
 }
 
 impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for VariableDefinition<'text, 'raw> {
@@ -261,11 +297,14 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for VariableDefinit
 
     fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
         let ty = value.to_member("type")?.required()?;
+        let position = value.position();
         match ty.to_unquoted_string_str()?.as_ref() {
             "const" => Ok(Self::Const {
+                position,
                 value: value.to_member("value")?.required()?,
             }),
             "env" => Ok(Self::Env {
+                position,
                 default: value.to_member("default")?.get(),
                 is_json: value
                     .to_member("is_json")?
