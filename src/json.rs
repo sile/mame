@@ -144,10 +144,7 @@ fn collect_references<'text, 'raw>(
         }
     } else if let Ok(object) = value.to_object() {
         for (i, (name, value)) in object.enumerate() {
-            if i == 0
-                && name.to_unquoted_string_str().is_ok_and(|s| s == "ref")
-                && value.kind() == nojson::JsonValueKind::String
-            {
+            if i == 0 && name.to_unquoted_string_str().is_ok_and(|s| s == "ref") {
                 references.insert(value.position(), value);
                 break;
             } else {
@@ -160,19 +157,29 @@ fn collect_references<'text, 'raw>(
 #[derive(Debug)]
 pub struct VariableResolver<'text, 'raw> {
     pub definitions: HashMap<String, VariableDefinition<'text, 'raw>>,
-    pub references: BTreeMap<usize, nojson::RawJsonValue<'text, 'raw>>,
+    pub references: BTreeMap<usize, String>,
 }
 
 impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for VariableResolver<'text, 'raw> {
     type Error = nojson::JsonParseError;
 
     fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
-        let definitions = value
+        let definitions: HashMap<_, _> = value
             .to_member("variables")?
             .map(TryFrom::try_from)?
             .unwrap_or_default();
+        let mut unchecked_references = BTreeMap::new();
+        collect_references(value, &mut unchecked_references);
+
         let mut references = BTreeMap::new();
-        collect_references(value, &mut references);
+        for (position, value) in unchecked_references {
+            let name = value.to_unquoted_string_str()?;
+            if !definitions.contains_key(name.as_ref()) {
+                return Err(value.invalid(format!("undefined variable")));
+            }
+            references.insert(position, name.into_owned());
+        }
+
         Ok(Self {
             definitions,
             references,
