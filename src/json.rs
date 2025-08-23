@@ -237,7 +237,11 @@ impl<'text, 'raw> VariableResolver<'text, 'raw> {
                 nojson::RawJsonOwned::parse(nojson::Json(value).to_string())?
             }
         } else if let Some(default) = default {
-            default.extract().into_owned()
+            if let Some(range) = self.resolved_values.get(&default.position()).cloned() {
+                nojson::RawJsonOwned::parse_jsonc(&self.resolved[range])?.0
+            } else {
+                default.extract().into_owned()
+            }
         } else {
             return Err(def.invalid("environment variable is not set"));
         };
