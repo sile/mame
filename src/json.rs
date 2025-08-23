@@ -224,7 +224,13 @@ impl<'text, 'raw> VariableResolver<'text, 'raw> {
         default: Option<nojson::RawJsonValue<'text, 'raw>>,
         is_json: bool,
     ) -> Result<(), nojson::JsonParseError> {
-        todo!("name: {name}")
+        if let Ok(value) = std::env::var(name)
+            && !value.is_empty()
+        {
+        } else if let Some(default) = default {
+            todo!();
+        } else {
+        }
     }
 
     fn resolve_value(
@@ -271,7 +277,7 @@ impl<'text, 'raw> VariableResolver<'text, 'raw> {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug)]
 pub enum VariableDefinition<'text, 'raw> {
     Const {
         position: usize,
@@ -279,15 +285,21 @@ pub enum VariableDefinition<'text, 'raw> {
     },
     Env {
         position: usize,
-        default: Option<nojson::RawJsonValue<'text, 'raw>>,
+        default: Option<nojsnon::RawJsonValue<'text, 'raw>>,
         is_json: bool,
+    },
+    Resolved {
+        position: usize,
+        value: nojson::RawJsonOwned,
     },
 }
 
 impl<'text, 'raw> VariableDefinition<'text, 'raw> {
-    fn position(self) -> usize {
+    fn position(&self) -> usize {
         match self {
-            Self::Const { position, .. } | Self::Env { position, .. } => position,
+            Self::Const { position, .. }
+            | Self::Env { position, .. }
+            | Self::Resolved { position, .. } => *position,
         }
     }
 }
