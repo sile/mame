@@ -1,6 +1,6 @@
 mod action;
+mod command;
 mod config;
-mod external_command;
 mod json;
 mod keybinding;
 mod keymatcher;
@@ -8,8 +8,8 @@ mod legend;
 mod terminal;
 
 pub use action::Action;
+pub use command::ExternalCommand;
 pub use config::Config;
-pub use external_command::ExternalCommand;
 pub use json::LoadJsonFileError;
 pub use keybinding::{Keybinding, Keymap};
 pub use keymatcher::display_key;
