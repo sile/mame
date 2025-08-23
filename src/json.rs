@@ -216,9 +216,20 @@ impl<'text, 'raw> VariableResolver<'text, 'raw> {
 
     fn resolve_const(
         &mut self,
+        name: &str,
+        def: nojson::RawJsonValue<'text, 'raw>,
         value: nojson::RawJsonValue<'text, 'raw>,
     ) -> Result<(), nojson::JsonParseError> {
-        todo!("{}", value.as_raw_str())
+        let json = if let Some(range) = self.resolved_values.get(&value.position()).cloned() {
+            nojson::RawJsonOwned::parse_jsonc(&self.resolved[range])?.0
+        } else {
+            value.extract().into_owned()
+        };
+
+        write!(self.resolved, "{json}").expect("infallible");
+        self.definitions
+            .insert(name.to_owned(), VariableDefinition::Resolved { def, json });
+        Ok(())
     }
 
     fn resolve_env(
@@ -264,9 +275,8 @@ impl<'text, 'raw> VariableResolver<'text, 'raw> {
                 return Err(value.invalid("variable reference appears before its definition"));
             }
             match def {
-                VariableDefinition::Const { value, .. } => {
-                    self.resolve_const(*value)?;
-                    todo!()
+                VariableDefinition::Const { def, value } => {
+                    self.resolve_const(&variable_name, *def, *value)?;
                 }
                 VariableDefinition::Env {
                     def,
