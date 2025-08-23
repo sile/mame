@@ -96,23 +96,9 @@ fn format_json_error(
         .unwrap_or((std::num::NonZeroUsize::MIN, std::num::NonZeroUsize::MIN));
 
     let line = error.get_line(text).unwrap_or("");
-
-    let prev_line = if line_num.get() == 1 {
-        None
-    } else {
-        text.lines().nth(line_num.get() - 2)
-    };
-
     let (display_line, display_column) = format_line_around_position(line, column_num.get());
-    let prev_display_line = prev_line.map(|prev| {
-        let (truncated, _) = format_line_around_position(prev, column_num.get());
-        truncated
-    });
     writeln!(f, "{error}")?;
     writeln!(f, "--> {}:{line_num}:{column_num}", path.display())?;
-    if let Some(prev) = prev_display_line {
-        writeln!(f, "     |{prev}")?;
-    }
     writeln!(f, "{line_num:4} |{display_line}")?;
     writeln!(f, "     |{:>column$} error", "^", column = display_column)?;
     Ok(())
@@ -315,22 +301,30 @@ impl<'text, 'raw> VariableResolver<'text, 'raw> {
                     write!(self.resolved, "{json}").expect("infallible");
                 }
             };
+            self.last_position = end_position;
         } else if !self.contains_ref(value) {
-            let end_position = value.position() + value.as_raw_str().len();
-            self.resolved
-                .push_str(&self.json.text()[self.last_position..end_position]);
         } else if let Ok(array) = value.to_array() {
             for value in array {
+                self.resolved
+                    .push_str(&self.json.text()[self.last_position..value.position()]);
+                self.last_position = value.position();
                 self.resolve_value(value)?;
             }
         } else if let Ok(object) = value.to_object() {
             for (_, value) in object {
+                self.resolved
+                    .push_str(&self.json.text()[self.last_position..value.position()]);
+                self.last_position = value.position();
                 self.resolve_value(value)?;
             }
         } else {
             panic!("bug");
         }
+
+        self.resolved
+            .push_str(&self.json.text()[self.last_position..end_position]);
         self.last_position = end_position;
+
         let after_end_position = self.resolved.len();
         self.resolved_values.insert(
             value.position(),
