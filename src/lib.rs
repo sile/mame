@@ -1,12 +1,11 @@
 mod action;
 mod config;
+mod external_command;
 mod json;
 mod keybinding;
 mod keymatcher;
 mod legend;
 mod terminal;
-// TODO: mod error_dialog or notification_area;
-mod external_command;
 
 pub use action::Action;
 pub use config::Config;
