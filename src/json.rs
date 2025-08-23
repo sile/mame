@@ -222,19 +222,17 @@ impl<'text, 'raw> VariableResolver<'text, 'raw> {
             self.resolved
                 .push_str(&self.json.text()[self.last_position..end_position]);
             self.last_position = end_position;
-            return Ok(());
+        } else if let Ok(array) = value.to_array() {
+            for value in array {
+                self.resolve_value(value)?;
+            }
+        } else if let Ok(object) = value.to_object() {
+            for (_, value) in object {
+                self.resolve_value(value)?;
+            }
+        } else {
+            panic!("bug");
         }
-        /*
-                match value.kind() {
-                    nojson::JsonValueKind::Null
-                    | nojson::JsonValueKind::Boolean
-                    | nojson::JsonValueKind::Integer
-                    | nojson::JsonValueKind::Float
-                    | nojson::JsonValueKind::String => todo!(),
-                    nojson::JsonValueKind::Array => todo!(),
-                    nojson::JsonValueKind::Object => todo!(),
-                }
-        */
         Ok(())
     }
 
