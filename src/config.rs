@@ -1,6 +1,5 @@
 use std::path::Path;
 
-use crate::json::VariableResolver;
 use crate::keybinding::KeymapRegistry;
 use crate::{Action, Keymap, LoadJsonFileError};
 
@@ -52,8 +51,6 @@ impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Conf
     type Error = nojson::JsonParseError;
 
     fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
-        let _resolver = VariableResolver::try_from(value)?;
-
         let setup = value.to_member("setup")?.required()?;
         let context_value = setup.to_member("context")?.required()?;
         let context = context_value.try_into()?;

@@ -11,14 +11,7 @@ where
         path: path.as_ref().to_path_buf(),
         error: e,
     })?;
-    let value = nojson::RawJson::parse_jsonc(&text)
-        .and_then(|(json, _)| f(json.value()))
-        .map_err(|e| LoadJsonFileError::Json {
-            path: path.as_ref().to_path_buf(),
-            text: text.clone(),
-            error: e,
-        })?;
-    Ok(value)
+    load_jsonc_str(&path.as_ref().display().to_string(), &text, f)
 }
 
 pub fn load_jsonc_str<F, T>(name: &str, text: &str, f: F) -> Result<T, LoadJsonFileError>
@@ -27,17 +20,22 @@ where
         nojson::RawJsonValue<'text, 'raw>,
     ) -> Result<T, nojson::JsonParseError>,
 {
+    let (json, _) = nojson::RawJson::parse_jsonc(text)
+        .map_err(|error| LoadJsonFileError::json(name, text, error))?;
+
+    let resolver = VariableResolver::try_from(json.value())
+        .map_err(|error| LoadJsonFileError::json(name, text, error))?;
+    if resolver.references.is_empty() {
+        return f(json.value()).map_err(|error| LoadJsonFileError::json(name, text, error));
+    }
+
+    let text = resolver.resolve(json.value());
     let value = nojson::RawJson::parse_jsonc(&text)
         .and_then(|(json, _)| f(json.value()))
-        .map_err(|e| LoadJsonFileError::Json {
-            path: PathBuf::from(name),
-            text: text.to_owned(),
-            error: e,
-        })?;
+        .map_err(|error| LoadJsonFileError::json(name, &text, error))?;
     Ok(value)
 }
 
-// TODO: Support nest for resolver
 #[derive(Debug)]
 pub enum LoadJsonFileError {
     Io {
@@ -49,6 +47,16 @@ pub enum LoadJsonFileError {
         text: String,
         error: nojson::JsonParseError,
     },
+}
+
+impl LoadJsonFileError {
+    fn json(path: &str, text: &str, error: nojson::JsonParseError) -> Self {
+        Self::Json {
+            path: PathBuf::from(path),
+            text: text.to_owned(),
+            error,
+        }
+    }
 }
 
 impl std::fmt::Display for LoadJsonFileError {
@@ -158,6 +166,7 @@ fn collect_references<'text, 'raw>(
 pub struct VariableResolver<'text, 'raw> {
     pub definitions: HashMap<String, VariableDefinition<'text, 'raw>>,
     pub references: BTreeMap<usize, String>,
+    pub resolved: String,
 }
 
 impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for VariableResolver<'text, 'raw> {
@@ -183,6 +192,7 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for VariableResolve
         Ok(Self {
             definitions,
             references,
+            resolved: String::new(),
         })
     }
 }
@@ -206,32 +216,9 @@ impl<'text, 'raw> VariableResolver<'text, 'raw> {
             }
         }
     */
-    /*
-        pub fn resolve(
-            &self,
-            value: nojson::RawJsonValue<'text, 'raw>,
-        ) -> Option<nojson::RawJsonOwned> {
-            let mut resolved = String::new();
-            if sefl.resolve_value(value, &mut resolved) {
-                Some(resolved)
-            } else {
-                None
-            }
-        }
-
-        fn resolve_value(
-            &self,
-            _value: nojson::RawJsonValue<'text, 'raw>,
-            _resolved: &mut String,
-        ) -> bool {
-            /*
-                        match value.kind() {
-                            nojson::JsonValueKind::Null => false,
-                        }
-            */
-            todo!()
-        }
-    */
+    pub fn resolve(self, value: nojson::RawJsonValue<'text, 'raw>) -> String {
+        self.resolved
+    }
 }
 
 #[derive(Debug)]
