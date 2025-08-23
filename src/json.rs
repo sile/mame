@@ -223,11 +223,7 @@ impl<'text, 'raw> VariableResolver<'text, 'raw> {
         let json = if let Some(range) = self.resolved_values.get(&value.position()).cloned() {
             let text = &self.resolved[range];
             nojson::RawJsonOwned::parse_jsonc(text)
-                .map_err(|e| {
-                    value.invalid(format!(
-                        "failed to parse resolved JSON\n```jsonc\n// This is the resolved JSON\n// ERROR: {e}\n{text}\n```\n"
-                    ))
-                })?
+                .map_err(|e| self.invalid_json(value, "resolved", text, e))?
                 .0
         } else {
             value.extract().into_owned()
@@ -237,6 +233,25 @@ impl<'text, 'raw> VariableResolver<'text, 'raw> {
         self.definitions
             .insert(name.to_owned(), VariableDefinition::Resolved { def, json });
         Ok(())
+    }
+
+    fn invalid_json(
+        &self,
+        value: nojson::RawJsonValue<'text, 'raw>,
+        kind: &str,
+        text: &str,
+        error: nojson::JsonParseError,
+    ) -> nojson::JsonParseError {
+        let message = format!(
+            r#"failed to parse {kind} JSON
+```jsonc
+// This is the resolved JSON
+// ERROR: {error}
+{text}
+```
+"#
+        );
+        value.invalid(message)
     }
 
     fn resolve_env(
@@ -250,17 +265,17 @@ impl<'text, 'raw> VariableResolver<'text, 'raw> {
             && !value.is_empty()
         {
             if is_json {
-                dbg!(1);
-                nojson::RawJsonOwned::parse(value)?
+                nojson::RawJsonOwned::parse(&value)
+                    .map_err(|e| self.invalid_json(def, "environment variable", &value, e))?
             } else {
-                dbg!(2);
-                nojson::RawJsonOwned::parse(nojson::Json(value).to_string())?
+                nojson::RawJsonOwned::parse(nojson::Json(value).to_string()).expect("infallible")
             }
         } else if let Some(default) = default {
             if let Some(range) = self.resolved_values.get(&default.position()).cloned() {
-                //dbg!(&self.resolved[range.clone()]);
-                //                nojson::RawJsonOwned::parse_jsonc(&self.resolved[range])?.0
-                todo!()
+                let text = &self.resolved[range];
+                nojson::RawJsonOwned::parse_jsonc(text)
+                    .map_err(|e| self.invalid_json(default, "resolved", text, e))?
+                    .0
             } else {
                 default.extract().into_owned()
             }
