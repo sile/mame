@@ -140,12 +140,16 @@ fn collect_references<'text, 'raw>(
             collect_references(value, references);
         }
     } else if let Ok(object) = value.to_object() {
-        for (i, (name, value)) in object.enumerate() {
-            if i == 0 && name.to_unquoted_string_str().is_ok_and(|s| s == "ref") {
-                references.insert(value.position(), value);
+        for (i, (member_name, member_value)) in object.enumerate() {
+            if i == 0
+                && member_name
+                    .to_unquoted_string_str()
+                    .is_ok_and(|s| s == "ref")
+            {
+                references.insert(value.position(), member_value);
                 break;
             } else {
-                collect_references(value, references);
+                collect_references(member_value, references);
             }
         }
     }
