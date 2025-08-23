@@ -175,7 +175,7 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for VariableResolve
         for (position, value) in unchecked_references {
             let name = value.to_unquoted_string_str()?;
             if !definitions.contains_key(name.as_ref()) {
-                return Err(value.invalid(format!("undefined variable")));
+                return Err(value.invalid(format!("undefined variable name")));
             }
             references.insert(position, name.into_owned());
         }
