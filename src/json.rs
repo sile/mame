@@ -221,7 +221,14 @@ impl<'text, 'raw> VariableResolver<'text, 'raw> {
         value: nojson::RawJsonValue<'text, 'raw>,
     ) -> Result<(), nojson::JsonParseError> {
         let json = if let Some(range) = self.resolved_values.get(&value.position()).cloned() {
-            nojson::RawJsonOwned::parse_jsonc(&self.resolved[range])?.0
+            let text = &self.resolved[range];
+            nojson::RawJsonOwned::parse_jsonc(text)
+                .map_err(|e| {
+                    value.invalid(format!(
+                        "failed to parse resolved JSON\n```jsonc\n// This is the resolved JSON\n// ERROR: {e}\n{text}\n```\n"
+                    ))
+                })?
+                .0
         } else {
             value.extract().into_owned()
         };
@@ -243,13 +250,17 @@ impl<'text, 'raw> VariableResolver<'text, 'raw> {
             && !value.is_empty()
         {
             if is_json {
+                dbg!(1);
                 nojson::RawJsonOwned::parse(value)?
             } else {
+                dbg!(2);
                 nojson::RawJsonOwned::parse(nojson::Json(value).to_string())?
             }
         } else if let Some(default) = default {
             if let Some(range) = self.resolved_values.get(&default.position()).cloned() {
-                nojson::RawJsonOwned::parse_jsonc(&self.resolved[range])?.0
+                //dbg!(&self.resolved[range.clone()]);
+                //                nojson::RawJsonOwned::parse_jsonc(&self.resolved[range])?.0
+                todo!()
             } else {
                 default.extract().into_owned()
             }
