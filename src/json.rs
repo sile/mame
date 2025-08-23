@@ -247,6 +247,7 @@ impl<'text, 'raw> VariableResolver<'text, 'raw> {
     fn resolve_env(
         &mut self,
         name: &str,
+        ref_value: nojson::RawJsonValue<'text, 'raw>,
         def: nojson::RawJsonValue<'text, 'raw>,
         default: Option<nojson::RawJsonValue<'text, 'raw>>,
         is_json: bool,
@@ -256,7 +257,7 @@ impl<'text, 'raw> VariableResolver<'text, 'raw> {
         {
             if is_json {
                 nojson::RawJsonOwned::parse(&value)
-                    .map_err(|e| self.invalid_json(def, "environment variable", &value, e))?
+                    .map_err(|e| self.invalid_json(ref_value, "environment variable", &value, e))?
             } else {
                 nojson::RawJsonOwned::parse(nojson::Json(value).to_string()).expect("infallible")
             }
@@ -270,7 +271,7 @@ impl<'text, 'raw> VariableResolver<'text, 'raw> {
                 default.extract().into_owned()
             }
         } else {
-            return Err(def.invalid("environment variable is not set"));
+            return Err(ref_value.invalid(format!("environment variable {name} is not set")));
         };
 
         write!(self.resolved, "{json}").expect("infallible");
@@ -299,7 +300,7 @@ impl<'text, 'raw> VariableResolver<'text, 'raw> {
                     default,
                     is_json,
                 } => {
-                    self.resolve_env(&variable_name, *def, *default, *is_json)?;
+                    self.resolve_env(&variable_name, value, *def, *default, *is_json)?;
                 }
                 VariableDefinition::Resolved { json, .. } => {
                     write!(self.resolved, "{json}").expect("infallible");
