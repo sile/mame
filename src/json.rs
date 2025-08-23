@@ -23,13 +23,15 @@ where
     let (json, _) = nojson::RawJson::parse_jsonc(text)
         .map_err(|error| LoadJsonFileError::json(name, text, error))?;
 
-    let resolver = VariableResolver::try_from(json.value())
-        .map_err(|error| LoadJsonFileError::json(name, text, error))?;
+    let resolver =
+        VariableResolver::new(&json).map_err(|error| LoadJsonFileError::json(name, text, error))?;
     if resolver.references.is_empty() {
         return f(json.value()).map_err(|error| LoadJsonFileError::json(name, text, error));
     }
 
-    let text = resolver.resolve(json.value());
+    let text = resolver
+        .resolve(json.value())
+        .map_err(|error| LoadJsonFileError::json(name, text, error))?;
     let value = nojson::RawJson::parse_jsonc(&text)
         .and_then(|(json, _)| f(json.value()))
         .map_err(|error| LoadJsonFileError::json(name, &text, error))?;
@@ -164,15 +166,16 @@ fn collect_references<'text, 'raw>(
 
 #[derive(Debug)]
 pub struct VariableResolver<'text, 'raw> {
-    pub definitions: HashMap<String, VariableDefinition<'text, 'raw>>,
-    pub references: BTreeMap<usize, String>,
-    pub resolved: String,
+    json: &'raw nojson::RawJson<'text>,
+    definitions: HashMap<String, VariableDefinition<'text, 'raw>>,
+    references: BTreeMap<usize, String>,
+    resolved: String,
+    last_position: usize,
 }
 
-impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for VariableResolver<'text, 'raw> {
-    type Error = nojson::JsonParseError;
-
-    fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
+impl<'text, 'raw> VariableResolver<'text, 'raw> {
+    fn new(json: &'raw nojson::RawJson<'text>) -> Result<Self, nojson::JsonParseError> {
+        let value = json.value();
         let definitions: HashMap<_, _> = value
             .to_member("variables")?
             .map(TryFrom::try_from)?
@@ -190,34 +193,57 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for VariableResolve
         }
 
         Ok(Self {
+            json,
             definitions,
             references,
             resolved: String::new(),
+            last_position: 0,
         })
     }
 }
 
 impl<'text, 'raw> VariableResolver<'text, 'raw> {
-    /*
-        pub fn contains_ref(&self, value: nojson::RawJsonValue<'text, 'raw>) -> bool {
-            match value.kind() {
-                nojson::JsonValueKind::Null
-                | nojson::JsonValueKind::Boolean
-                | nojson::JsonValueKind::Integer
-                | nojson::JsonValueKind::Float
-                | nojson::JsonValueKind::String => false,
-                nojson::JsonValueKind::Array => value
-                    .to_array()
-                    .expect("infallible")
-                    .any(|v| self.contains_ref(v)),
-                nojson::JsonValueKind::Object => {
-                    if let Some(v) = value.to_member("ref").expect("infallible").get() {}
-                }
-            }
+    pub fn resolve(
+        mut self,
+        value: nojson::RawJsonValue<'text, 'raw>,
+    ) -> Result<String, nojson::JsonParseError> {
+        self.resolve_value(value)?;
+        Ok(self.resolved)
+    }
+
+    fn resolve_value(
+        &mut self,
+        value: nojson::RawJsonValue<'text, 'raw>,
+    ) -> Result<(), nojson::JsonParseError> {
+        if let Some(r) = self.references.remove(&value.position()) {
+            todo!();
+        } else if !self.contains_ref(value) {
+            let end_position = value.position() + value.as_raw_str().len();
+            self.resolved
+                .push_str(&self.json.text()[self.last_position..end_position]);
+            self.last_position = end_position;
+            return Ok(());
         }
-    */
-    pub fn resolve(self, value: nojson::RawJsonValue<'text, 'raw>) -> String {
-        self.resolved
+        /*
+                match value.kind() {
+                    nojson::JsonValueKind::Null
+                    | nojson::JsonValueKind::Boolean
+                    | nojson::JsonValueKind::Integer
+                    | nojson::JsonValueKind::Float
+                    | nojson::JsonValueKind::String => todo!(),
+                    nojson::JsonValueKind::Array => todo!(),
+                    nojson::JsonValueKind::Object => todo!(),
+                }
+        */
+        Ok(())
+    }
+
+    fn contains_ref(&self, value: nojson::RawJsonValue<'text, 'raw>) -> bool {
+        let end_position = value.position() + value.as_raw_str().len();
+        self.references
+            .range(value.position()..end_position)
+            .next()
+            .is_some()
     }
 }
 
