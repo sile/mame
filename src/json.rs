@@ -137,8 +137,24 @@ fn format_line_around_position(line: &str, column_pos: usize) -> (String, usize)
 fn collect_references<'text, 'raw>(
     value: nojson::RawJsonValue<'text, 'raw>,
     references: &mut BTreeMap<usize, nojson::RawJsonValue<'text, 'raw>>,
-) -> Result<(), nojson::JsonParseError> {
-    todo!()
+) {
+    if let Ok(array) = value.to_array() {
+        for value in array {
+            collect_references(value, references);
+        }
+    } else if let Ok(object) = value.to_object() {
+        for (i, (name, value)) in object.enumerate() {
+            if i == 0
+                && name.to_unquoted_string_str().is_ok_and(|s| s == "ref")
+                && value.kind() == nojson::JsonValueKind::String
+            {
+                references.insert(value.position(), value);
+                break;
+            } else {
+                collect_references(value, references);
+            }
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -156,7 +172,7 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for VariableResolve
             .map(TryFrom::try_from)?
             .unwrap_or_default();
         let mut references = BTreeMap::new();
-        collect_references(value, &mut references)?;
+        collect_references(value, &mut references);
         Ok(Self {
             definitions,
             references,
