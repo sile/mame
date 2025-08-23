@@ -171,6 +171,7 @@ pub struct VariableResolver<'text, 'raw> {
     definitions: HashMap<String, VariableDefinition<'text, 'raw>>,
     references: BTreeMap<usize, String>,
     resolved: String,
+    resolved_values: BTreeMap<usize, std::ops::Range<usize>>, // original pos => resolved range
     last_position: usize,
 }
 
@@ -198,6 +199,7 @@ impl<'text, 'raw> VariableResolver<'text, 'raw> {
             definitions,
             references,
             resolved: String::new(),
+            resolved_values: BTreeMap::new(),
             last_position: 0,
         })
     }
@@ -251,6 +253,7 @@ impl<'text, 'raw> VariableResolver<'text, 'raw> {
         value: nojson::RawJsonValue<'text, 'raw>,
     ) -> Result<(), nojson::JsonParseError> {
         let end_position = value.position() + value.as_raw_str().len();
+        let after_start_position = self.resolved.len();
         if let Some(variable_name) = self.references.remove(&value.position()) {
             let def = &self.definitions[&variable_name];
             if value.position() < def.position() {
@@ -288,6 +291,14 @@ impl<'text, 'raw> VariableResolver<'text, 'raw> {
             panic!("bug");
         }
         self.last_position = end_position;
+        let after_end_position = self.resolved.len();
+        self.resolved_values.insert(
+            value.position(),
+            std::ops::Range {
+                start: after_start_position,
+                end: after_end_position,
+            },
+        );
         Ok(())
     }
 
