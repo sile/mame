@@ -1,4 +1,3 @@
-use std::num::NonZeroUsize;
 use std::path::PathBuf;
 
 use crate::io_error;
@@ -43,8 +42,8 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for FilePreviewPane
 
 #[derive(Debug)]
 pub struct FilePreview {
-    left_pane: Option<FilePreviewPane>,
-    right_pane: Option<FilePreviewPane>,
+    left_pane: FilePreviewPane,
+    right_pane: FilePreviewPane,
     parent_region: tuinix::TerminalRegion,
 }
 
@@ -56,13 +55,13 @@ impl FilePreview {
                 .as_ref()
                 .map(FilePreviewPane::new)
                 .transpose()?
-                .flatten(),
+                .unwrap_or_default(),
             right_pane: spec
                 .right_pane
                 .as_ref()
                 .map(FilePreviewPane::new)
                 .transpose()?
-                .flatten(),
+                .unwrap_or_default(),
             parent_region: tuinix::TerminalRegion::default(),
         })
     }
@@ -71,19 +70,24 @@ impl FilePreview {
         self.parent_region = region;
 
         let pane_region = region.take_bottom(region.size.rows / 3);
-        match (&mut self.left_pane, &mut self.right_pane) {
-            (None, None) => {}
-            (Some(pane), None) => {
-                pane.region = pane_region
-                    .take_bottom(pane.desired_rows())
-                    .take_left(pane.desired_cols());
-            }
-            (None, Some(pane)) => {
-                pane.region = pane_region
-                    .take_bottom(pane.desired_rows())
-                    .take_right(pane.desired_cols());
-            }
-            (Some(left_pane), Some(right_pane)) => {}
+        if self.left_pane.desired_cols() + self.right_pane.desired_cols() <= pane_region.size.cols {
+            self.left_pane.region = pane_region
+                .take_left(self.left_pane.desired_cols())
+                .take_bottom(self.left_pane.desired_rows());
+            self.right_pane.region = pane_region
+                .take_right(self.right_pane.desired_cols())
+                .take_bottom(self.right_pane.desired_rows());
+        } else if self.right_pane.is_empty() {
+            self.left_pane.region = pane_region.take_bottom(self.left_pane.desired_rows());
+        } else if self.left_pane.is_empty() {
+            self.right_pane.region = pane_region.take_bottom(self.right_pane.desired_rows());
+        } else {
+            self.left_pane.region = pane_region
+                .take_left(pane_region.size.cols / 2)
+                .take_bottom(self.left_pane.desired_rows());
+            self.right_pane.region = pane_region
+                .take_right(pane_region.size.cols / 2)
+                .take_bottom(self.right_pane.desired_rows());
         }
     }
 
@@ -96,43 +100,46 @@ impl FilePreview {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct FilePreviewPane {
     path: PathBuf,
     text: String,
-    max_rows: NonZeroUsize,
-    max_cols: NonZeroUsize,
+    max_rows: usize,
+    max_cols: usize,
     region: tuinix::TerminalRegion,
 }
 
 impl FilePreviewPane {
-    fn new(spec: &FilePreviewPaneSpec) -> std::io::Result<Option<Self>> {
-        let content = std::fs::read(&spec.file)
-            .map_err(|e| io_error(e, &format!("failed to read file '{}'", spec.file.display())))?;
+    fn new(spec: &FilePreviewPaneSpec) -> std::io::Result<Self> {
+        let content = if !spec.file.exists() {
+            Vec::new()
+        } else {
+            std::fs::read(&spec.file).map_err(|e| {
+                io_error(e, &format!("failed to read file '{}'", spec.file.display()))
+            })?
+        };
         let text = String::from_utf8_lossy(&content).into_owned();
         let max_rows = text.lines().count();
         let max_cols = text.lines().map(str_cols).max().unwrap_or_default();
-        if let Some((max_rows, max_cols)) =
-            NonZeroUsize::new(max_rows).zip(NonZeroUsize::new(max_cols))
-        {
-            Ok(Some(Self {
-                path: spec.file.clone(),
-                text,
-                max_rows,
-                max_cols,
-                region: tuinix::TerminalRegion::default(),
-            }))
-        } else {
-            Ok(None)
-        }
+        Ok(Self {
+            path: spec.file.clone(),
+            text,
+            max_rows,
+            max_cols,
+            region: tuinix::TerminalRegion::default(),
+        })
+    }
+
+    fn is_empty(&self) -> bool {
+        self.max_rows == 0 || self.max_cols == 0
     }
 
     fn desired_rows(&self) -> usize {
-        self.max_rows.get() + 1
+        self.max_rows + 1
     }
 
     fn desired_cols(&self) -> usize {
-        self.max_cols.get().max(str_cols(self.file_name()) + 3) + 1
+        self.max_cols.max(str_cols(self.file_name()) + 3) + 1
     }
 
     fn file_name(&self) -> &str {
