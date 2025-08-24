@@ -8,7 +8,7 @@ mod legend;
 mod terminal;
 
 pub use action::Action;
-pub use command::ExternalCommand;
+pub use command::{ExternalCommand, ExternalCommandInput, ExternalCommandOutput, ShellCommand};
 pub use config::Config;
 pub use json::LoadJsonFileError;
 pub use keybinding::{Keybinding, Keymap};

@@ -3,9 +3,10 @@ use std::path::PathBuf;
 
 #[derive(Debug, Clone)]
 pub struct ExternalCommand {
-    pub command: PathBuf,
+    pub name: PathBuf,
     pub args: Vec<String>,
     pub envs: BTreeMap<String, String>,
+    // stdout, stderr, stdin
 }
 
 impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ExternalCommand {
@@ -13,7 +14,7 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ExternalCommand
 
     fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
         Ok(Self {
-            command: value.to_member("command")?.required()?.try_into()?,
+            name: value.to_member("name")?.required()?.try_into()?,
             args: value
                 .to_member("args")?
                 .map(Vec::try_from)?
@@ -26,31 +27,22 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ExternalCommand
     }
 }
 
-impl nojson::DisplayJson for ExternalCommand {
-    fn fmt(&self, f: &mut nojson::JsonFormatter<'_, '_>) -> std::fmt::Result {
-        f.object(|f| {
-            f.member("command", &self.command)?;
-            if !self.args.is_empty() {
-                f.member("args", &self.args)?;
-            }
-            if !self.envs.is_empty() {
-                f.member("envs", &self.envs)?;
-            }
-            Ok(())
-        })
-    }
+#[derive(Debug, Clone)]
+pub enum ExternalCommandInput {
+    Null,
+    Text { text: String },
+    File { path: PathBuf },
 }
 
-// TODO: ShellCommand
-/*
-#[derive(Debug)]
-pub enum ExternalCommandStdio {
+#[derive(Debug, Clone)]
+pub enum ExternalCommandOutput {
     Null,
-    Text(String),
-    File(PathBuf),
+    File { path: PathBuf, skip_if_empty: bool },
 }
-*/
-// TODO: ExternalCommandError, ExternalCommandOutput::{File, String, ...}, AllowStatusCode
+
+#[derive(Debug, Clone)]
+pub struct ShellCommand(ExternalCommand);
+
 /*
 {"type": "shell",
  "command": "echo $MAMEGRE_FILE > $HOME"}
