@@ -4,6 +4,8 @@ use std::path::PathBuf;
 pub struct FilePreviewOptions {
     pub path: PathBuf,
     pub skip_if_empty: bool,
+    pub max_rows: Option<usize>,
+    pub max_cols: Option<usize>,
 }
 
 impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for FilePreviewOptions {
@@ -16,6 +18,8 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for FilePreviewOpti
                 .to_member("skip_if_empty")?
                 .map(bool::try_from)?
                 .unwrap_or_default(),
+            max_rows: value.to_member("max_rows")?.map(usize::try_from)?,
+            max_cols: value.to_member("max_cols")?.map(usize::try_from)?,
         })
     }
 }
