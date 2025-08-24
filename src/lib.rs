@@ -15,5 +15,5 @@ pub use json::LoadJsonError;
 pub use keybinding::{Keybinding, Keymap};
 pub use keymatcher::display_key;
 pub use legend::render_legend;
-pub use preview::{FilePreview, FilePreviewOptions};
+pub use preview::{FilePreview, FilePreviewPaneSpec, FilePreviewSpec};
 pub use terminal::{UnicodeCharWidthEstimator, UnicodeTerminalFrame, char_cols, str_cols};
