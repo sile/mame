@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::io::Write;
 use std::path::PathBuf;
 
 #[derive(Debug, Clone)]
@@ -28,47 +29,42 @@ impl ExternalCommand {
             let name = self.name.display();
             io_error(e, &format!("failed to execute command '{name}'"))
         })?;
-        //self.handle_input(&mut child)?;
+
+        self.handle_input(child.stdin.take()).map_err(|e| {
+            let name = self.name.display();
+            io_error(e, &format!("failed to write stdin to command '{name}'"))
+        })?;
         let output = child.wait_with_output().map_err(|e| {
             let name = self.name.display();
             io_error(e, &format!("failed to wait for command '{name}'"))
         })?;
-        // self.handle_output();
+        self.handle_output(&output.stdout)?;
+        self.handle_output(&output.stderr)?;
+
         Ok(output)
     }
-}
 
-/*
-{"type": "shell",
- "command": "echo $MAMEGRE_FILE > $HOME"}
-    fn execute_command(&self, buffer: &str) -> orfail::Result<String> {
-
-        let mut child = cmd
-            .spawn()
-            .or_fail_with(|e| format!("Failed to execute grep command: {e}"))?;
-
-        if let Some(mut stdin) = child.stdin.take() {
-            write!(stdin, "{buffer}").or_fail()?;
-            stdin.flush().or_fail()?;
-        }
-
-        let output = child
-            .wait_with_output()
-            .or_fail_with(|e| format!("Failed to wait for command: {e}"))?;
-
-        match output.status.code() {
-            Some(0 | 1) => {}
-            _ => {
-                let stderr = String::from_utf8_lossy(&output.stderr);
-                return Err(orfail::Failure::new(format!(
-                    "Grep command failed: {}",
-                    stderr.trim()
-                )));
+    fn handle_input<W: Write>(&self, writer: Option<W>) -> std::io::Result<()> {
+        let Some(mut writer) = writer else {
+            return Ok(());
+        };
+        match &self.stdin {
+            ExternalCommandInput::Null => {}
+            ExternalCommandInput::Text { text } => {
+                writer.write_all(text.as_bytes())?;
+            }
+            ExternalCommandInput::File { path } => {
+                let mut file = std::fs::File::open(path)?;
+                std::io::copy(&mut file, &mut writer)?;
             }
         }
-        String::from_utf8(output.stdout).or_fail()
+        Ok(())
     }
-*/
+
+    fn handle_output(&self, output: &[u8]) -> std::io::Result<()> {
+        Ok(())
+    }
+}
 
 impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ExternalCommand {
     type Error = nojson::JsonParseError;
@@ -136,6 +132,7 @@ pub enum ExternalCommandOutput {
     Null,
     File {
         path: PathBuf,
+        append: bool,
         skip_if_empty: bool,
     },
 }
@@ -149,6 +146,10 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ExternalCommand
             "null" => Ok(Self::Null),
             "file" => Ok(Self::File {
                 path: value.to_member("path")?.required()?.try_into()?,
+                append: value
+                    .to_member("append")?
+                    .map(bool::try_from)?
+                    .unwrap_or_default(),
                 skip_if_empty: value
                     .to_member("skip_if_empty")?
                     .map(bool::try_from)?
