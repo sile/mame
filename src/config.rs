@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use crate::keybinding::KeymapRegistry;
-use crate::{Action, Keymap, LoadJsonFileError};
+use crate::{Action, Keymap, LoadJsonError};
 
 #[derive(Debug)]
 pub struct Config<A> {
@@ -10,11 +10,11 @@ pub struct Config<A> {
 }
 
 impl<A: Action> Config<A> {
-    pub fn load_file<P: AsRef<Path>>(path: P) -> Result<Self, LoadJsonFileError> {
+    pub fn load_file<P: AsRef<Path>>(path: P) -> Result<Self, LoadJsonError> {
         crate::json::load_jsonc_file(path, |v| Config::try_from(v))
     }
 
-    pub fn load_str(name: &str, text: &str) -> Result<Self, LoadJsonFileError> {
+    pub fn load_str(name: &str, text: &str) -> Result<Self, LoadJsonError> {
         crate::json::load_jsonc_str(name, text, |v| Config::try_from(v))
     }
 

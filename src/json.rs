@@ -2,45 +2,45 @@ use std::collections::{BTreeMap, HashMap};
 use std::fmt::Write;
 use std::path::{Path, PathBuf};
 
-pub fn load_jsonc_file<P: AsRef<Path>, F, T>(path: P, f: F) -> Result<T, LoadJsonFileError>
+pub fn load_jsonc_file<P: AsRef<Path>, F, T>(path: P, f: F) -> Result<T, LoadJsonError>
 where
     F: for<'text, 'raw> FnOnce(
         nojson::RawJsonValue<'text, 'raw>,
     ) -> Result<T, nojson::JsonParseError>,
 {
-    let text = std::fs::read_to_string(&path).map_err(|e| LoadJsonFileError::Io {
+    let text = std::fs::read_to_string(&path).map_err(|e| LoadJsonError::Io {
         path: path.as_ref().to_path_buf(),
         error: e,
     })?;
     load_jsonc_str(&path.as_ref().display().to_string(), &text, f)
 }
 
-pub fn load_jsonc_str<F, T>(name: &str, text: &str, f: F) -> Result<T, LoadJsonFileError>
+pub fn load_jsonc_str<F, T>(name: &str, text: &str, f: F) -> Result<T, LoadJsonError>
 where
     F: for<'text, 'raw> FnOnce(
         nojson::RawJsonValue<'text, 'raw>,
     ) -> Result<T, nojson::JsonParseError>,
 {
     let (json, _) = nojson::RawJson::parse_jsonc(text)
-        .map_err(|error| LoadJsonFileError::json(name, text, error))?;
+        .map_err(|error| LoadJsonError::json(name, text, error))?;
 
     let resolver =
-        VariableResolver::new(&json).map_err(|error| LoadJsonFileError::json(name, text, error))?;
+        VariableResolver::new(&json).map_err(|error| LoadJsonError::json(name, text, error))?;
     if resolver.references.is_empty() {
-        return f(json.value()).map_err(|error| LoadJsonFileError::json(name, text, error));
+        return f(json.value()).map_err(|error| LoadJsonError::json(name, text, error));
     }
 
     let text = resolver
         .resolve(json.value())
-        .map_err(|error| LoadJsonFileError::json(name, text, error))?;
+        .map_err(|error| LoadJsonError::json(name, text, error))?;
     let value = nojson::RawJson::parse_jsonc(&text)
         .and_then(|(json, _)| f(json.value()))
-        .map_err(|error| LoadJsonFileError::json(name, &text, error))?;
+        .map_err(|error| LoadJsonError::json(name, &text, error))?;
     Ok(value)
 }
 
 #[derive(Debug)]
-pub enum LoadJsonFileError {
+pub enum LoadJsonError {
     Io {
         path: PathBuf,
         error: std::io::Error,
@@ -52,7 +52,7 @@ pub enum LoadJsonFileError {
     },
 }
 
-impl LoadJsonFileError {
+impl LoadJsonError {
     fn json(path: &str, text: &str, error: nojson::JsonParseError) -> Self {
         Self::Json {
             path: PathBuf::from(path),
@@ -62,20 +62,18 @@ impl LoadJsonFileError {
     }
 }
 
-impl std::fmt::Display for LoadJsonFileError {
+impl std::fmt::Display for LoadJsonError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            LoadJsonFileError::Io { path, error } => {
+            LoadJsonError::Io { path, error } => {
                 write!(f, "failed to read file '{}': {error}", path.display())
             }
-            LoadJsonFileError::Json { path, error, text } => {
-                format_json_error(f, path, error, text)
-            }
+            LoadJsonError::Json { path, error, text } => format_json_error(f, path, error, text),
         }
     }
 }
 
-impl std::error::Error for LoadJsonFileError {
+impl std::error::Error for LoadJsonError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         if let Self::Io { error, .. } = self {
             Some(error)
