@@ -24,9 +24,17 @@ impl ExternalCommand {
         cmd.stdout(std::process::Stdio::piped());
         cmd.stderr(std::process::Stdio::piped());
 
-        //let mut child = cmd.spawn()?;
-
-        todo!()
+        let mut child = cmd.spawn().map_err(|e| {
+            let name = self.name.display();
+            io_error(e, &format!("failed to execute command '{name}'"))
+        })?;
+        //self.handle_input(&mut child)?;
+        let output = child.wait_with_output().map_err(|e| {
+            let name = self.name.display();
+            io_error(e, &format!("failed to wait for command '{name}'"))
+        })?;
+        // self.handle_output();
+        Ok(output)
     }
 }
 
@@ -203,4 +211,8 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ShellCommand {
                 .unwrap_or_default(),
         }))
     }
+}
+
+fn io_error(cause: std::io::Error, message: &str) -> std::io::Error {
+    std::io::Error::new(cause.kind(), format!("{message}: {cause}"))
 }
