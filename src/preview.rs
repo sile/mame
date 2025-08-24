@@ -1,3 +1,4 @@
+use std::fmt::Write;
 use std::path::PathBuf;
 
 use crate::io_error;
@@ -92,11 +93,68 @@ impl FilePreview {
     }
 
     pub fn render_left_pane(&self) -> (tuinix::TerminalPosition, UnicodeTerminalFrame) {
-        todo!()
+        let region = self.left_pane.region;
+        let mut frame = UnicodeTerminalFrame::new(region.size);
+        let file_name_cols = str_cols(self.left_pane.file_name());
+        if file_name_cols + 4 <= region.size.cols {
+            // TODO: align center
+            write!(frame, "─ {} ", self.left_pane.file_name()).expect("infallible");
+            for _ in file_name_cols + 2..region.size.cols - 2 {
+                write!(frame, "─").expect("infallible");
+            }
+        } else {
+            for _ in 0..region.size.cols - 1 {
+                write!(frame, "─").expect("infallible");
+            }
+        }
+        writeln!(frame, "┐").expect("infallible");
+
+        for _ in 0..region.size.rows {
+            for _ in 0..region.size.cols - 1 {
+                write!(frame, " ").expect("infallible");
+            }
+            writeln!(frame, "│").expect("infallible");
+        }
+
+        let text_region = region.drop_top(1).drop_right(1);
+        let mut text_frame = UnicodeTerminalFrame::new(text_region.size);
+        self.left_pane
+            .render_text(&mut text_frame)
+            .expect("infallible");
+        frame.draw(text_region.position, &text_frame);
+
+        (region.position, frame)
     }
 
     pub fn render_right_pane(&self) -> (tuinix::TerminalPosition, UnicodeTerminalFrame) {
-        todo!()
+        let region = self.right_pane.region;
+        let mut frame = UnicodeTerminalFrame::new(region.size);
+        let file_name_cols = str_cols(self.right_pane.file_name());
+        writeln!(frame, "┌").expect("infallible");
+        if file_name_cols + 4 <= region.size.cols {
+            // TODO: align center
+            write!(frame, " {} ─", self.right_pane.file_name()).expect("infallible");
+            for _ in file_name_cols + 4..region.size.cols {
+                write!(frame, "─").expect("infallible");
+            }
+        } else {
+            for _ in 1..region.size.cols {
+                write!(frame, "─").expect("infallible");
+            }
+        }
+
+        for _ in 0..region.size.rows {
+            writeln!(frame, "│").expect("infallible");
+        }
+
+        let text_region = region.drop_top(1).drop_left(1);
+        let mut text_frame = UnicodeTerminalFrame::new(text_region.size);
+        self.right_pane
+            .render_text(&mut text_frame)
+            .expect("infallible");
+        frame.draw(text_region.position, &text_frame);
+
+        (region.position, frame)
     }
 }
 
@@ -147,5 +205,9 @@ impl FilePreviewPane {
             .file_name()
             .and_then(|n| n.to_str())
             .unwrap_or_default()
+    }
+
+    fn render_text(&self, frame: &mut UnicodeTerminalFrame) -> std::fmt::Result {
+        todo!()
     }
 }
