@@ -11,6 +11,57 @@ pub struct ExternalCommand {
     pub stderr: ExternalCommandOutput,
 }
 
+impl ExternalCommand {
+    pub fn execute(&self) -> std::io::Result<std::process::Output> {
+        let mut cmd = std::process::Command::new(&self.name);
+        for arg in &self.args {
+            cmd.arg(arg);
+        }
+        for (k, v) in &self.envs {
+            cmd.env(k, v);
+        }
+        cmd.stdin(std::process::Stdio::piped());
+        cmd.stdout(std::process::Stdio::piped());
+        cmd.stderr(std::process::Stdio::piped());
+
+        //let mut child = cmd.spawn()?;
+
+        todo!()
+    }
+}
+
+/*
+{"type": "shell",
+ "command": "echo $MAMEGRE_FILE > $HOME"}
+    fn execute_command(&self, buffer: &str) -> orfail::Result<String> {
+
+        let mut child = cmd
+            .spawn()
+            .or_fail_with(|e| format!("Failed to execute grep command: {e}"))?;
+
+        if let Some(mut stdin) = child.stdin.take() {
+            write!(stdin, "{buffer}").or_fail()?;
+            stdin.flush().or_fail()?;
+        }
+
+        let output = child
+            .wait_with_output()
+            .or_fail_with(|e| format!("Failed to wait for command: {e}"))?;
+
+        match output.status.code() {
+            Some(0 | 1) => {}
+            _ => {
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                return Err(orfail::Failure::new(format!(
+                    "Grep command failed: {}",
+                    stderr.trim()
+                )));
+            }
+        }
+        String::from_utf8(output.stdout).or_fail()
+    }
+*/
+
 impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ExternalCommand {
     type Error = nojson::JsonParseError;
 
@@ -103,43 +154,48 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ExternalCommand
 #[derive(Debug, Clone)]
 pub struct ShellCommand(ExternalCommand);
 
-/*
-{"type": "shell",
- "command": "echo $MAMEGRE_FILE > $HOME"}
-    fn execute_command(&self, buffer: &str) -> orfail::Result<String> {
-        let mut cmd = std::process::Command::new(&self.action.command);
-        for arg in &self.action.args {
-            cmd.arg(arg);
-        }
-        cmd.arg(self.query.iter().copied().collect::<String>());
-
-        cmd.stdin(std::process::Stdio::piped());
-        cmd.stdout(std::process::Stdio::piped());
-        cmd.stderr(std::process::Stdio::piped());
-
-        let mut child = cmd
-            .spawn()
-            .or_fail_with(|e| format!("Failed to execute grep command: {e}"))?;
-
-        if let Some(mut stdin) = child.stdin.take() {
-            write!(stdin, "{buffer}").or_fail()?;
-            stdin.flush().or_fail()?;
-        }
-
-        let output = child
-            .wait_with_output()
-            .or_fail_with(|e| format!("Failed to wait for command: {e}"))?;
-
-        match output.status.code() {
-            Some(0 | 1) => {}
-            _ => {
-                let stderr = String::from_utf8_lossy(&output.stderr);
-                return Err(orfail::Failure::new(format!(
-                    "Grep command failed: {}",
-                    stderr.trim()
-                )));
-            }
-        }
-        String::from_utf8(output.stdout).or_fail()
+impl ShellCommand {
+    pub fn execute(&self) -> std::io::Result<std::process::Output> {
+        self.0.execute()
     }
-*/
+
+    pub fn get(&self) -> &ExternalCommand {
+        &self.0
+    }
+
+    pub fn get_mut(&mut self) -> &mut ExternalCommand {
+        &mut self.0
+    }
+}
+
+impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ShellCommand {
+    type Error = nojson::JsonParseError;
+
+    fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
+        let mut args = vec!["-c".to_owned()];
+        for script in value.to_member("script")?.required()?.to_array()? {
+            args.push(script.try_into()?);
+        }
+
+        Ok(Self(ExternalCommand {
+            name: value.to_member("name")?.required()?.try_into()?,
+            args,
+            envs: value
+                .to_member("envs")?
+                .map(BTreeMap::try_from)?
+                .unwrap_or_default(),
+            stdin: value
+                .to_member("stdin")?
+                .map(TryFrom::try_from)?
+                .unwrap_or_default(),
+            stdout: value
+                .to_member("stdout")?
+                .map(TryFrom::try_from)?
+                .unwrap_or_default(),
+            stderr: value
+                .to_member("stderr")?
+                .map(TryFrom::try_from)?
+                .unwrap_or_default(),
+        }))
+    }
+}
