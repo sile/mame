@@ -1,3 +1,4 @@
+use std::num::NonZeroUsize;
 use std::path::PathBuf;
 
 use crate::io_error;
@@ -44,6 +45,7 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for FilePreviewPane
 pub struct FilePreview {
     left_pane: Option<FilePreviewPane>,
     right_pane: Option<FilePreviewPane>,
+    parent_region: tuinix::TerminalRegion,
 }
 
 impl FilePreview {
@@ -53,28 +55,43 @@ impl FilePreview {
                 .left_pane
                 .as_ref()
                 .map(FilePreviewPane::new)
-                .transpose()?,
+                .transpose()?
+                .flatten(),
             right_pane: spec
                 .right_pane
                 .as_ref()
                 .map(FilePreviewPane::new)
-                .transpose()?,
+                .transpose()?
+                .flatten(),
+            parent_region: tuinix::TerminalRegion::default(),
         })
     }
 
-    pub fn render_left_pane(
-        &self,
-        mut region: tuinix::TerminalRegion,
-    ) -> (tuinix::TerminalPosition, UnicodeTerminalFrame) {
-        region.size.rows /= 3;
+    pub fn set_parent_region(&mut self, region: tuinix::TerminalRegion) {
+        self.parent_region = region;
+
+        let pane_region = region.take_bottom(region.size.rows / 3);
+        match (&mut self.left_pane, &mut self.right_pane) {
+            (None, None) => {}
+            (Some(pane), None) => {
+                pane.region = pane_region
+                    .take_bottom(pane.desired_rows())
+                    .take_left(pane.desired_cols());
+            }
+            (None, Some(pane)) => {
+                pane.region = pane_region
+                    .take_bottom(pane.desired_rows())
+                    .take_right(pane.desired_cols());
+            }
+            (Some(left_pane), Some(right_pane)) => {}
+        }
+    }
+
+    pub fn render_left_pane(&self) -> (tuinix::TerminalPosition, UnicodeTerminalFrame) {
         todo!()
     }
 
-    pub fn render_right_pane(
-        &self,
-        mut region: tuinix::TerminalRegion,
-    ) -> (tuinix::TerminalPosition, UnicodeTerminalFrame) {
-        region.size.rows /= 3;
+    pub fn render_right_pane(&self) -> (tuinix::TerminalPosition, UnicodeTerminalFrame) {
         todo!()
     }
 }
@@ -83,15 +100,45 @@ impl FilePreview {
 struct FilePreviewPane {
     path: PathBuf,
     text: String,
+    max_rows: NonZeroUsize,
+    max_cols: NonZeroUsize,
+    region: tuinix::TerminalRegion,
 }
 
 impl FilePreviewPane {
-    fn new(spec: &FilePreviewPaneSpec) -> std::io::Result<Self> {
+    fn new(spec: &FilePreviewPaneSpec) -> std::io::Result<Option<Self>> {
         let content = std::fs::read(&spec.file)
             .map_err(|e| io_error(e, &format!("failed to read file '{}'", spec.file.display())))?;
-        Ok(Self {
-            path: spec.file.clone(),
-            text: String::from_utf8_lossy(&content).into_owned(),
-        })
+        let text = String::from_utf8_lossy(&content).into_owned();
+        let max_rows = text.lines().count();
+        let max_cols = text.lines().map(str_cols).max().unwrap_or_default();
+        if let Some((max_rows, max_cols)) =
+            NonZeroUsize::new(max_rows).zip(NonZeroUsize::new(max_cols))
+        {
+            Ok(Some(Self {
+                path: spec.file.clone(),
+                text,
+                max_rows,
+                max_cols,
+                region: tuinix::TerminalRegion::default(),
+            }))
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn desired_rows(&self) -> usize {
+        self.max_rows.get() + 1
+    }
+
+    fn desired_cols(&self) -> usize {
+        self.max_cols.get().max(str_cols(self.file_name()) + 3) + 1
+    }
+
+    fn file_name(&self) -> &str {
+        self.path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or_default()
     }
 }
