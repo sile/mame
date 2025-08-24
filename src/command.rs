@@ -178,7 +178,12 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ShellCommand {
         }
 
         Ok(Self(ExternalCommand {
-            name: value.to_member("name")?.required()?.try_into()?,
+            name: value
+                .to_member("name")?
+                .map(PathBuf::try_from)?
+                .unwrap_or_else(|| {
+                    PathBuf::from(std::env::var("SHELL").unwrap_or_else(|_| "sh".to_owned()))
+                }),
             args,
             envs: value
                 .to_member("envs")?
