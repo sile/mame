@@ -2,6 +2,8 @@ use std::collections::BTreeMap;
 use std::io::Write;
 use std::path::PathBuf;
 
+use crate::io_error;
+
 #[derive(Debug, Clone)]
 pub struct ExternalCommand {
     pub name: PathBuf,
@@ -240,8 +242,4 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ShellCommand {
                 .unwrap_or_default(),
         }))
     }
-}
-
-fn io_error(cause: std::io::Error, message: &str) -> std::io::Error {
-    std::io::Error::new(cause.kind(), format!("{message}: {cause}"))
 }

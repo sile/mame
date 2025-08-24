@@ -17,3 +17,7 @@ pub use keymatcher::display_key;
 pub use legend::render_legend;
 pub use preview::{FilePreview, FilePreviewPaneSpec, FilePreviewSpec};
 pub use terminal::{UnicodeCharWidthEstimator, UnicodeTerminalFrame, char_cols, str_cols};
+
+fn io_error(cause: std::io::Error, message: &str) -> std::io::Error {
+    std::io::Error::new(cause.kind(), format!("{message}: {cause}"))
+}

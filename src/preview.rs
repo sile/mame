@@ -1,5 +1,8 @@
 use std::path::PathBuf;
 
+use crate::io_error;
+use crate::{UnicodeTerminalFrame, str_cols};
+
 #[derive(Debug, Clone)]
 pub struct FilePreviewSpec {
     pub left_pane: Option<FilePreviewPaneSpec>,
@@ -38,4 +41,57 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for FilePreviewPane
 }
 
 #[derive(Debug)]
-pub struct FilePreview {}
+pub struct FilePreview {
+    left_pane: Option<FilePreviewPane>,
+    right_pane: Option<FilePreviewPane>,
+}
+
+impl FilePreview {
+    pub fn new(spec: &FilePreviewSpec) -> std::io::Result<Self> {
+        Ok(Self {
+            left_pane: spec
+                .left_pane
+                .as_ref()
+                .map(FilePreviewPane::new)
+                .transpose()?,
+            right_pane: spec
+                .right_pane
+                .as_ref()
+                .map(FilePreviewPane::new)
+                .transpose()?,
+        })
+    }
+
+    pub fn render_left_pane(
+        &self,
+        mut region: tuinix::TerminalRegion,
+    ) -> (tuinix::TerminalPosition, UnicodeTerminalFrame) {
+        region.size.rows /= 3;
+        todo!()
+    }
+
+    pub fn render_right_pane(
+        &self,
+        mut region: tuinix::TerminalRegion,
+    ) -> (tuinix::TerminalPosition, UnicodeTerminalFrame) {
+        region.size.rows /= 3;
+        todo!()
+    }
+}
+
+#[derive(Debug)]
+struct FilePreviewPane {
+    path: PathBuf,
+    text: String,
+}
+
+impl FilePreviewPane {
+    fn new(spec: &FilePreviewPaneSpec) -> std::io::Result<Self> {
+        let content = std::fs::read(&spec.file)
+            .map_err(|e| io_error(e, &format!("failed to read file '{}'", spec.file.display())))?;
+        Ok(Self {
+            path: spec.file.clone(),
+            text: String::from_utf8_lossy(&content).into_owned(),
+        })
+    }
+}
