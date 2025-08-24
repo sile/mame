@@ -6,7 +6,7 @@ pub struct ExternalCommand {
     pub name: PathBuf,
     pub args: Vec<String>,
     pub envs: BTreeMap<String, String>,
-    // stdout, stderr, stdin
+    pub stdin: ExternalCommandInput, // stdout, stderr
 }
 
 impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ExternalCommand {
@@ -23,15 +23,42 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ExternalCommand
                 .to_member("envs")?
                 .map(BTreeMap::try_from)?
                 .unwrap_or_default(),
+            stdin: value
+                .to_member("stdin")?
+                .map(TryFrom::try_from)?
+                .unwrap_or_default(),
         })
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub enum ExternalCommandInput {
+    #[default]
     Null,
-    Text { text: String },
-    File { path: PathBuf },
+    Text {
+        text: String,
+    },
+    File {
+        path: PathBuf,
+    },
+}
+
+impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ExternalCommandInput {
+    type Error = nojson::JsonParseError;
+
+    fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
+        let ty = value.to_member("type")?.required()?;
+        match ty.to_unquoted_string_str()?.as_ref() {
+            "null" => Ok(Self::Null),
+            "text" => Ok(Self::Text {
+                text: value.to_member("text")?.required()?.try_into()?,
+            }),
+            "file" => Ok(Self::File {
+                path: value.to_member("path")?.required()?.try_into()?,
+            }),
+            _ => Err(ty.invalid("unknown stdin type")),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
