@@ -30,7 +30,7 @@ impl ExternalCommand {
             io_error(e, &format!("failed to execute command '{name}'"))
         })?;
 
-        self.handle_input(child.stdin.take()).map_err(|e| {
+        self.stdin.handle_input(child.stdin.take()).map_err(|e| {
             let name = self.name.display();
             io_error(e, &format!("failed to write stdin to command '{name}'"))
         })?;
@@ -38,31 +38,16 @@ impl ExternalCommand {
             let name = self.name.display();
             io_error(e, &format!("failed to wait for command '{name}'"))
         })?;
-        self.handle_output(&output.stdout)?;
-        self.handle_output(&output.stderr)?;
+        self.stdout.handle_output(&output.stdout).map_err(|e| {
+            let name = self.name.display();
+            io_error(e, &format!("failed to handle stdout from command '{name}'"))
+        })?;
+        self.stderr.handle_output(&output.stderr).map_err(|e| {
+            let name = self.name.display();
+            io_error(e, &format!("failed to handle stderr from command '{name}'"))
+        })?;
 
         Ok(output)
-    }
-
-    fn handle_input<W: Write>(&self, writer: Option<W>) -> std::io::Result<()> {
-        let Some(mut writer) = writer else {
-            return Ok(());
-        };
-        match &self.stdin {
-            ExternalCommandInput::Null => {}
-            ExternalCommandInput::Text { text } => {
-                writer.write_all(text.as_bytes())?;
-            }
-            ExternalCommandInput::File { path } => {
-                let mut file = std::fs::File::open(path)?;
-                std::io::copy(&mut file, &mut writer)?;
-            }
-        }
-        Ok(())
-    }
-
-    fn handle_output(&self, output: &[u8]) -> std::io::Result<()> {
-        Ok(())
     }
 }
 
@@ -108,6 +93,25 @@ pub enum ExternalCommandInput {
     },
 }
 
+impl ExternalCommandInput {
+    fn handle_input<W: Write>(&self, writer: Option<W>) -> std::io::Result<()> {
+        let Some(mut writer) = writer else {
+            return Ok(());
+        };
+        match self {
+            Self::Null => {}
+            Self::Text { text } => {
+                writer.write_all(text.as_bytes())?;
+            }
+            Self::File { path } => {
+                let mut file = std::fs::File::open(path)?;
+                std::io::copy(&mut file, &mut writer)?;
+            }
+        }
+        Ok(())
+    }
+}
+
 impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ExternalCommandInput {
     type Error = nojson::JsonParseError;
 
@@ -135,6 +139,30 @@ pub enum ExternalCommandOutput {
         append: bool,
         skip_if_empty: bool,
     },
+}
+
+impl ExternalCommandOutput {
+    fn handle_output(&self, output: &[u8]) -> std::io::Result<()> {
+        match self {
+            Self::Null => Ok(()),
+            Self::File {
+                path,
+                append,
+                skip_if_empty,
+            } => {
+                if *skip_if_empty && output.is_empty() {
+                    return Ok(());
+                }
+
+                let mut file = std::fs::OpenOptions::new()
+                    .create(true)
+                    .append(*append)
+                    .open(path)?;
+                file.write_all(output)?;
+                Ok(())
+            }
+        }
+    }
 }
 
 impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ExternalCommandOutput {
