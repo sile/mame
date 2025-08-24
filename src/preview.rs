@@ -24,7 +24,6 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for FilePreviewSpec
 #[derive(Debug, Clone)]
 pub struct FilePreviewPaneSpec {
     pub file: PathBuf,
-    pub skip_if_empty: bool,
 }
 
 impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for FilePreviewPaneSpec {
@@ -33,10 +32,6 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for FilePreviewPane
     fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
         Ok(Self {
             file: value.to_member("fil")?.required()?.try_into()?,
-            skip_if_empty: value
-                .to_member("skip_if_empty")?
-                .map(bool::try_from)?
-                .unwrap_or_default(),
         })
     }
 }
@@ -208,6 +203,9 @@ impl FilePreviewPane {
     }
 
     fn render_text(&self, frame: &mut UnicodeTerminalFrame) -> std::fmt::Result {
-        todo!()
+        for line in self.text.lines().take(frame.size().rows) {
+            write!(frame, "{}", line.trim_end())?;
+        }
+        Ok(())
     }
 }
