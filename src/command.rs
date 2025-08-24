@@ -6,7 +6,9 @@ pub struct ExternalCommand {
     pub name: PathBuf,
     pub args: Vec<String>,
     pub envs: BTreeMap<String, String>,
-    pub stdin: ExternalCommandInput, // stdout, stderr
+    pub stdin: ExternalCommandInput,
+    pub stdout: ExternalCommandOutput,
+    pub stderr: ExternalCommandOutput,
 }
 
 impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ExternalCommand {
@@ -25,6 +27,14 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ExternalCommand
                 .unwrap_or_default(),
             stdin: value
                 .to_member("stdin")?
+                .map(TryFrom::try_from)?
+                .unwrap_or_default(),
+            stdout: value
+                .to_member("stdout")?
+                .map(TryFrom::try_from)?
+                .unwrap_or_default(),
+            stderr: value
+                .to_member("stderr")?
                 .map(TryFrom::try_from)?
                 .unwrap_or_default(),
         })
@@ -61,10 +71,33 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ExternalCommand
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub enum ExternalCommandOutput {
+    #[default]
     Null,
-    File { path: PathBuf, skip_if_empty: bool },
+    File {
+        path: PathBuf,
+        skip_if_empty: bool,
+    },
+}
+
+impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ExternalCommandOutput {
+    type Error = nojson::JsonParseError;
+
+    fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
+        let ty = value.to_member("type")?.required()?;
+        match ty.to_unquoted_string_str()?.as_ref() {
+            "null" => Ok(Self::Null),
+            "file" => Ok(Self::File {
+                path: value.to_member("path")?.required()?.try_into()?,
+                skip_if_empty: value
+                    .to_member("skip_if_empty")?
+                    .map(bool::try_from)?
+                    .unwrap_or_default(),
+            }),
+            _ => Err(ty.invalid("unknown stdin type")),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
