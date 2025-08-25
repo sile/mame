@@ -111,7 +111,7 @@ impl FilePreview {
             writeln!(frame, "│").expect("infallible");
         }
 
-        let text_region = region.drop_top(1).drop_right(1);
+        let text_region = region.size.to_region().drop_top(1).drop_right(1);
         let mut text_frame = UnicodeTerminalFrame::new(text_region.size);
         self.left_pane
             .render_text(&mut text_frame)
@@ -125,7 +125,7 @@ impl FilePreview {
         let region = self.right_pane.region;
         let mut frame = UnicodeTerminalFrame::new(region.size);
         let file_name_cols = str_cols(self.right_pane.file_name());
-        writeln!(frame, "┌").expect("infallible");
+        write!(frame, "┌").expect("infallible");
         if file_name_cols + 4 <= region.size.cols {
             // TODO: align center
             write!(frame, " {} ─", self.right_pane.file_name()).expect("infallible");
@@ -142,7 +142,7 @@ impl FilePreview {
             writeln!(frame, "│").expect("infallible");
         }
 
-        let text_region = region.drop_top(1).drop_left(1);
+        let text_region = region.size.to_region().drop_top(1).drop_left(1);
         let mut text_frame = UnicodeTerminalFrame::new(text_region.size);
         self.right_pane
             .render_text(&mut text_frame)
@@ -204,7 +204,7 @@ impl FilePreviewPane {
 
     fn render_text(&self, frame: &mut UnicodeTerminalFrame) -> std::fmt::Result {
         for line in self.text.lines().take(frame.size().rows) {
-            write!(frame, "{}", line.trim_end())?;
+            writeln!(frame, "{}", line.trim_end())?;
         }
         Ok(())
     }
