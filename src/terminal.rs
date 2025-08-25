@@ -1,7 +1,3 @@
-use tuinix::KeyInput;
-
-use crate::keymatcher::KeyMatcher;
-
 /// Calculates the display width of a string in terminal columns.
 ///
 /// This function uses Unicode width calculation to determine how many columns
@@ -36,10 +32,6 @@ pub fn str_cols(s: &str) -> usize {
 /// ```
 pub fn char_cols(c: char) -> usize {
     unicode_width::UnicodeWidthChar::width(c).unwrap_or(0)
-}
-
-pub fn display_key(key: KeyInput) -> impl std::fmt::Display {
-    KeyMatcher::Literal(key)
 }
 
 /// A terminal frame that uses Unicode-aware character width estimation.
