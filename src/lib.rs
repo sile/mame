@@ -12,7 +12,6 @@ pub mod terminal;
 pub use action::Action;
 pub use config::Config;
 pub use keybinding::{Keybinding, Keymap};
-pub use keymatcher::display_key;
 pub use legend::render_legend;
 pub use preview::{FilePreview, FilePreviewPaneSpec, FilePreviewSpec};
 

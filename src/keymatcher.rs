@@ -1,9 +1,5 @@
 use tuinix::{KeyCode, KeyInput};
 
-pub fn display_key(key: KeyInput) -> impl std::fmt::Display {
-    KeyMatcher::Literal(key)
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum KeyMatcher {
     Literal(KeyInput),
