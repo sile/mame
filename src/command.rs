@@ -9,9 +9,9 @@ pub struct ExternalCommand {
     pub name: PathBuf,
     pub args: Vec<String>,
     pub envs: BTreeMap<String, String>,
-    pub stdin: ExternalCommandInput,
-    pub stdout: ExternalCommandOutput,
-    pub stderr: ExternalCommandOutput,
+    pub stdin: CommandInput,
+    pub stdout: CommandOutput,
+    pub stderr: CommandOutput,
 }
 
 impl ExternalCommand {
@@ -84,7 +84,7 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ExternalCommand
 }
 
 #[derive(Debug, Default, Clone)]
-pub enum ExternalCommandInput {
+pub enum CommandInput {
     #[default]
     Null,
     Text {
@@ -95,7 +95,7 @@ pub enum ExternalCommandInput {
     },
 }
 
-impl ExternalCommandInput {
+impl CommandInput {
     fn handle_input<W: Write>(&self, writer: Option<W>) -> std::io::Result<()> {
         let Some(mut writer) = writer else {
             return Ok(());
@@ -114,7 +114,7 @@ impl ExternalCommandInput {
     }
 }
 
-impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ExternalCommandInput {
+impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for CommandInput {
     type Error = nojson::JsonParseError;
 
     fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
@@ -133,7 +133,7 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ExternalCommand
 }
 
 #[derive(Debug, Default, Clone)]
-pub enum ExternalCommandOutput {
+pub enum CommandOutput {
     #[default]
     Null,
     File {
@@ -143,7 +143,7 @@ pub enum ExternalCommandOutput {
     },
 }
 
-impl ExternalCommandOutput {
+impl CommandOutput {
     fn handle_output(&self, output: &[u8]) -> std::io::Result<()> {
         match self {
             Self::Null => Ok(()),
@@ -169,7 +169,7 @@ impl ExternalCommandOutput {
     }
 }
 
-impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ExternalCommandOutput {
+impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for CommandOutput {
     type Error = nojson::JsonParseError;
 
     fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {

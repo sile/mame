@@ -1,16 +1,15 @@
 mod action;
-mod command;
 mod config;
 mod keybinding;
 mod keymatcher;
 mod legend;
 mod preview;
 
+pub mod command;
 pub mod json;
 pub mod terminal;
 
 pub use action::Action;
-pub use command::{ExternalCommand, ExternalCommandInput, ExternalCommandOutput, ShellCommand};
 pub use config::Config;
 pub use keybinding::{Keybinding, Keymap};
 pub use keymatcher::display_key;
