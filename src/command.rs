@@ -159,6 +159,7 @@ impl ExternalCommandOutput {
                 let mut file = std::fs::OpenOptions::new()
                     .create(true)
                     .write(true)
+                    .truncate(!*append)
                     .append(*append)
                     .open(path)?;
                 file.write_all(output)?;
