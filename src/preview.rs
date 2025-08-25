@@ -15,8 +15,8 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for FilePreviewSpec
 
     fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
         Ok(Self {
-            left_pane: value.to_member("left_pane")?.map(TryFrom::try_from)?,
-            right_pane: value.to_member("right_pane")?.map(TryFrom::try_from)?,
+            left_pane: value.to_member("left-pane")?.map(TryFrom::try_from)?,
+            right_pane: value.to_member("right-pane")?.map(TryFrom::try_from)?,
         })
     }
 }
@@ -31,7 +31,7 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for FilePreviewPane
 
     fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
         Ok(Self {
-            file: value.to_member("fil")?.required()?.try_into()?,
+            file: value.to_member("file")?.required()?.try_into()?,
         })
     }
 }
