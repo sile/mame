@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::fmt::Write;
 use std::path::{Path, PathBuf};
 
-pub fn load_jsonc_file<P: AsRef<Path>, F, T>(path: P, f: F) -> Result<T, LoadJsonError>
+pub(crate) fn load_jsonc_file<P: AsRef<Path>, F, T>(path: P, f: F) -> Result<T, LoadJsonError>
 where
     F: for<'text, 'raw> FnOnce(
         nojson::RawJsonValue<'text, 'raw>,
@@ -15,7 +15,7 @@ where
     load_jsonc_str(&path.as_ref().display().to_string(), &text, f)
 }
 
-pub fn load_jsonc_str<F, T>(name: &str, text: &str, f: F) -> Result<T, LoadJsonError>
+pub(crate) fn load_jsonc_str<F, T>(name: &str, text: &str, f: F) -> Result<T, LoadJsonError>
 where
     F: for<'text, 'raw> FnOnce(
         nojson::RawJsonValue<'text, 'raw>,
@@ -154,7 +154,7 @@ fn collect_references<'text, 'raw>(
 }
 
 #[derive(Debug)]
-pub struct VariableResolver<'text, 'raw> {
+struct VariableResolver<'text, 'raw> {
     json: &'raw nojson::RawJson<'text>,
     definitions: HashMap<String, VariableDefinition<'text, 'raw>>,
     references: BTreeMap<usize, String>,
@@ -349,7 +349,7 @@ impl<'text, 'raw> VariableResolver<'text, 'raw> {
 }
 
 #[derive(Debug)]
-pub enum VariableDefinition<'text, 'raw> {
+enum VariableDefinition<'text, 'raw> {
     Const {
         def: nojson::RawJsonValue<'text, 'raw>,
         value: nojson::RawJsonValue<'text, 'raw>,

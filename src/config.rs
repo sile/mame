@@ -1,7 +1,8 @@
 use std::path::Path;
 
+use crate::json::LoadJsonError;
 use crate::keybinding::KeymapRegistry;
-use crate::{Action, Keymap, LoadJsonError};
+use crate::{Action, Keymap};
 
 #[derive(Debug)]
 pub struct Config<A> {

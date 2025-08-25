@@ -1,6 +1,6 @@
 use std::fmt::Write;
 
-use crate::{UnicodeTerminalFrame, str_cols};
+use crate::terminal::{UnicodeTerminalFrame, str_cols};
 
 pub fn render_legend<I, T>(title: &str, items: I) -> UnicodeTerminalFrame
 where

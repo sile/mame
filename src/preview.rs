@@ -2,7 +2,7 @@ use std::fmt::Write;
 use std::path::PathBuf;
 
 use crate::io_error;
-use crate::{UnicodeTerminalFrame, str_cols};
+use crate::terminal::{UnicodeTerminalFrame, str_cols};
 
 #[derive(Debug, Clone)]
 pub struct FilePreviewSpec {
