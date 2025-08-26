@@ -92,9 +92,17 @@ impl FilePreview {
         let mut frame = UnicodeTerminalFrame::new(region.size);
         let file_name_cols = str_cols(self.left_pane.file_name());
         if file_name_cols + 4 <= region.size.cols {
-            // TODO: align center
-            write!(frame, "─ {} ", self.left_pane.file_name()).expect("infallible");
-            for _ in file_name_cols + 2..region.size.cols - 2 {
+            // Center-align the file name in the available space
+            let available_space = region.size.cols - 2; // excluding the final "┐"
+            let padding_needed = available_space - file_name_cols - 2; // 2 for the spaces around filename
+            let left_padding = padding_needed / 2;
+            let right_padding = padding_needed - left_padding;
+
+            for _ in 0..left_padding {
+                write!(frame, "─").expect("infallible");
+            }
+            write!(frame, " {} ", self.left_pane.file_name()).expect("infallible");
+            for _ in 0..right_padding {
                 write!(frame, "─").expect("infallible");
             }
         } else {
@@ -127,9 +135,17 @@ impl FilePreview {
         let file_name_cols = str_cols(self.right_pane.file_name());
         write!(frame, "┌").expect("infallible");
         if file_name_cols + 4 <= region.size.cols {
-            // TODO: align center
-            write!(frame, " {} ─", self.right_pane.file_name()).expect("infallible");
-            for _ in file_name_cols + 4..region.size.cols {
+            // Center-align the file name in the available space
+            let available_space = region.size.cols - 1; // excluding the initial "┌"
+            let padding_needed = available_space - file_name_cols - 2; // 2 for the spaces around filename
+            let left_padding = padding_needed / 2;
+            let right_padding = padding_needed - left_padding;
+
+            for _ in 0..left_padding {
+                write!(frame, "─").expect("infallible");
+            }
+            write!(frame, " {} ", self.right_pane.file_name()).expect("infallible");
+            for _ in 0..right_padding {
                 write!(frame, "─").expect("infallible");
             }
         } else {
