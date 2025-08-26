@@ -13,6 +13,7 @@ pub trait Action:
 #[derive(Debug)]
 pub struct ActionConfig<A> {
     context: String,
+    setup_action: Option<A>,
     keymap_registry: KeymapRegistry<A>,
 }
 
@@ -23,6 +24,10 @@ impl<A: Action> ActionConfig<A> {
 
     pub fn load_str(name: &str, text: &str) -> Result<Self, LoadJsonError> {
         crate::json::load_jsonc_str(name, text, |v| ActionConfig::try_from(v))
+    }
+
+    pub fn setup_action(&self) -> Option<&A> {
+        self.setup_action.as_ref()
     }
 
     pub fn set_current_context(&mut self, context: &str) -> bool {
@@ -70,6 +75,7 @@ impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Acti
 
         let config = Self {
             context,
+            setup_action: setup.to_member("action")?.map(A::try_from)?,
             keymap_registry,
         };
         config.keymap_registry.validate(keybindings, &config)?;
