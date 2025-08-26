@@ -248,17 +248,13 @@ impl<'text, 'raw> VariableResolver<'text, 'raw> {
         ref_value: nojson::RawJsonValue<'text, 'raw>,
         def: nojson::RawJsonValue<'text, 'raw>,
         default: Option<nojson::RawJsonValue<'text, 'raw>>,
-        is_json: bool,
     ) -> Result<(), nojson::JsonParseError> {
         let json = if let Ok(value) = std::env::var(name)
             && !value.is_empty()
         {
-            if is_json {
-                nojson::RawJsonOwned::parse(&value)
-                    .map_err(|e| self.invalid_json(ref_value, "environment variable", &value, e))?
-            } else {
-                nojson::RawJsonOwned::parse(nojson::Json(value).to_string()).expect("infallible")
-            }
+            nojson::RawJsonOwned::parse(&value)
+                .or_else(|_| nojson::RawJsonOwned::parse(nojson::Json(value).to_string()))
+                .expect("infallible")
         } else if let Some(default) = default {
             if let Some(range) = self.resolved_values.get(&default.position()).cloned() {
                 let text = &self.resolved[range];
@@ -293,12 +289,8 @@ impl<'text, 'raw> VariableResolver<'text, 'raw> {
                 VariableDefinition::Const { def, value } => {
                     self.resolve_const(&variable_name, *def, *value)?;
                 }
-                VariableDefinition::Env {
-                    def,
-                    default,
-                    is_json,
-                } => {
-                    self.resolve_env(&variable_name, value, *def, *default, *is_json)?;
+                VariableDefinition::Env { def, default } => {
+                    self.resolve_env(&variable_name, value, *def, *default)?;
                 }
                 VariableDefinition::Resolved { json, .. } => {
                     write!(self.resolved, "{json}").expect("infallible");
@@ -357,7 +349,6 @@ enum VariableDefinition<'text, 'raw> {
     Env {
         def: nojson::RawJsonValue<'text, 'raw>,
         default: Option<nojson::RawJsonValue<'text, 'raw>>,
-        is_json: bool,
     },
     Resolved {
         def: nojson::RawJsonValue<'text, 'raw>,
@@ -388,10 +379,6 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for VariableDefinit
             "env" => Ok(Self::Env {
                 def: value,
                 default: value.to_member("default")?.get(),
-                is_json: value
-                    .to_member("is_json")?
-                    .map(bool::try_from)?
-                    .unwrap_or_default(),
             }),
             _ => Err(ty.invalid("unknown variable type")),
         }
