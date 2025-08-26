@@ -1,6 +1,7 @@
 use std::fmt::Write;
 use std::path::PathBuf;
 
+use crate::fmt::padding;
 use crate::io_error;
 use crate::terminal::{UnicodeTerminalFrame, str_cols};
 
@@ -98,24 +99,16 @@ impl FilePreview {
             let left_padding = padding_needed / 2;
             let right_padding = padding_needed - left_padding;
 
-            for _ in 0..left_padding {
-                write!(frame, "─").expect("infallible");
-            }
+            write!(frame, "{}", padding('─', left_padding)).expect("infallible");
             write!(frame, " {} ", self.left_pane.file_name()).expect("infallible");
-            for _ in 0..right_padding {
-                write!(frame, "─").expect("infallible");
-            }
+            write!(frame, "{}", padding('─', right_padding)).expect("infallible");
         } else {
-            for _ in 0..region.size.cols - 1 {
-                write!(frame, "─").expect("infallible");
-            }
+            write!(frame, "{}", padding('─', region.size.cols - 1)).expect("infallible");
         }
         writeln!(frame, "┐").expect("infallible");
 
         for _ in 0..region.size.rows {
-            for _ in 0..region.size.cols - 1 {
-                write!(frame, " ").expect("infallible");
-            }
+            write!(frame, "{}", padding(' ', region.size.cols - 1)).expect("infallible");
             writeln!(frame, "│").expect("infallible");
         }
 
@@ -141,17 +134,11 @@ impl FilePreview {
             let left_padding = padding_needed / 2;
             let right_padding = padding_needed - left_padding;
 
-            for _ in 0..left_padding {
-                write!(frame, "─").expect("infallible");
-            }
+            write!(frame, "{}", padding('─', left_padding)).expect("infallible");
             write!(frame, " {} ", self.right_pane.file_name()).expect("infallible");
-            for _ in 0..right_padding {
-                write!(frame, "─").expect("infallible");
-            }
+            write!(frame, "{}", padding('─', right_padding)).expect("infallible");
         } else {
-            for _ in 1..region.size.cols {
-                write!(frame, "─").expect("infallible");
-            }
+            write!(frame, "{}", padding('─', region.size.cols - 1)).expect("infallible");
         }
 
         for _ in 0..region.size.rows {
