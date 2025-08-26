@@ -1,10 +1,10 @@
 [package]
 name = "mame"
-version = "0.0.0"
+version = "0.1.0"
 edition = "2024"
 authors = ["Takeru Ohta <phjgt308@gmail.com>"]
 license = "MIT"
-description = "TUI text editor"
+description = "Common building blocks to build TUI applications."
 homepage = "https://github.com/sile/mame"
 repository = "https://github.com/sile/mame"
 readme = "README.md"
