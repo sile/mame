@@ -1,8 +1,7 @@
-mod action;
-mod config;
 mod keybinding;
 mod keymatcher;
 
+pub mod action;
 pub mod command;
 pub mod json;
 pub mod legend;
@@ -14,10 +13,6 @@ pub mod fmt {
         crate::keymatcher::KeyMatcher::Literal(key)
     }
 }
-
-pub use action::Action;
-pub use config::Config;
-pub use keybinding::{Keybinding, Keymap};
 
 fn io_error(cause: std::io::Error, message: &str) -> std::io::Error {
     std::io::Error::new(cause.kind(), format!("{message}: {cause}"))

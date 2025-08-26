@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
+use crate::action::{Action, ActionConfig};
 use crate::keymatcher::KeyMatcher;
-use crate::{Action, Config};
 
 #[derive(Debug, Clone)]
 pub struct KeymapRegistry<A> {
@@ -12,7 +12,7 @@ impl<A: Action> KeymapRegistry<A> {
     pub fn validate(
         &self,
         value: nojson::RawJsonValue<'_, '_>,
-        config: &Config<A>,
+        config: &ActionConfig<A>,
     ) -> Result<(), nojson::JsonParseError> {
         for (k, v) in value.to_object()? {
             let context = k.to_unquoted_string_str()?;
@@ -52,7 +52,7 @@ impl<A: Action> Keymap<A> {
     fn validate(
         &self,
         value: nojson::RawJsonValue<'_, '_>,
-        config: &Config<A>,
+        config: &ActionConfig<A>,
     ) -> Result<(), nojson::JsonParseError> {
         for (v, binding) in value.to_array().expect("bug").zip(&self.bindings) {
             binding.validate(v, config)?;
@@ -83,7 +83,7 @@ impl<A: Action> Keybinding<A> {
     fn validate(
         &self,
         value: nojson::RawJsonValue<'_, '_>,
-        config: &Config<A>,
+        config: &ActionConfig<A>,
     ) -> Result<(), nojson::JsonParseError> {
         if let Some(context) = &self.context
             && config.get_keymap(context).is_none()
