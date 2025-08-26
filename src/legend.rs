@@ -1,7 +1,18 @@
+//! Legend rendering utilities for terminal UI components.
+//!
+//! This module provides functionality to create bordered legend boxes that display
+//! lists of items (typically keybindings or help text) in a terminal interface.
+//! The rendered legends use Unicode box-drawing characters and automatically
+//! calculate proper sizing based on content width.
 use std::fmt::Write;
 
 use crate::terminal::{UnicodeTerminalFrame, str_cols};
 
+/// Renders a bordered legend box containing a list of items with an optional title.
+///
+/// Creates a Unicode terminal frame with box-drawing characters that displays
+/// the provided items in a vertical list. If a title is provided, it's centered
+/// in the bottom border; otherwise, the border is a plain horizontal line.
 pub fn render_legend<I, T>(title: &str, items: I) -> UnicodeTerminalFrame
 where
     I: Iterator<Item = T>,

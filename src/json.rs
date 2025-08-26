@@ -1,3 +1,4 @@
+//! JSON/JSONC utilities.
 use std::collections::{BTreeMap, HashMap};
 use std::fmt::Write;
 use std::path::{Path, PathBuf};
