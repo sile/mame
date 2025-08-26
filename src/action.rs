@@ -1,3 +1,8 @@
+//! Configurable action system with context-aware keybindings.
+//!
+//! This module provides the core action system that allows defining custom actions
+//! and keybindings through JSON/JSONC configuration files. Actions can be organized
+//! into different contexts, each with their own set of keybindings.
 use std::path::Path;
 
 use crate::json::LoadJsonError;

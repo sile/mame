@@ -1,3 +1,8 @@
+//! External command execution with configurable I/O handling.
+//!
+//! This module provides utilities for executing external commands and shell scripts
+//! with fine-grained control over stdin, stdout, and stderr. Commands can be configured
+//! to read input from text or files, and write output to files with various options.
 use std::collections::BTreeMap;
 use std::io::Write;
 use std::path::PathBuf;
