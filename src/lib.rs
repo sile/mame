@@ -1,3 +1,6 @@
+//! This crate provides common building blocks to build TUI (Terminal User Interface) applications.
+#![warn(missing_docs)]
+
 mod keybinding;
 mod keymatcher;
 
