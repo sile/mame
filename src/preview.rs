@@ -10,9 +10,16 @@ use crate::fmt::padding;
 use crate::io_error;
 use crate::terminal::{UnicodeTerminalFrame, str_cols};
 
+/// Configuration for a file preview layout with optional left and right panes.
+///
+/// Specifies which files to display in a side-by-side preview arrangement.
+/// Either pane can be omitted to display only a single file preview.
 #[derive(Debug, Clone)]
 pub struct FilePreviewSpec {
+    /// Configuration for the left preview pane
     pub left_pane: Option<FilePreviewPaneSpec>,
+
+    /// Configuration for the right preview pane
     pub right_pane: Option<FilePreviewPaneSpec>,
 }
 
@@ -27,8 +34,13 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for FilePreviewSpec
     }
 }
 
+/// Configuration for a single file preview pane.
+///
+/// Specifies the file to display within a preview pane. The pane will
+/// show the file's contents with a bordered layout including the filename.
 #[derive(Debug, Clone)]
 pub struct FilePreviewPaneSpec {
+    /// Path to the file to display in this preview pane
     pub file: PathBuf,
 }
 
@@ -42,6 +54,11 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for FilePreviewPane
     }
 }
 
+/// A dual-pane file preview component for terminal display.
+///
+/// Renders file contents in bordered panes with automatic layout management.
+/// Supports side-by-side display of two files or single-file preview when
+/// one pane is empty. Panes are positioned in the bottom third of the parent region.
 #[derive(Debug)]
 pub struct FilePreview {
     left_pane: FilePreviewPane,
@@ -50,6 +67,7 @@ pub struct FilePreview {
 }
 
 impl FilePreview {
+    /// Creates a new file preview from the given specification.
     pub fn new(spec: &FilePreviewSpec) -> std::io::Result<Self> {
         Ok(Self {
             left_pane: spec
@@ -68,6 +86,9 @@ impl FilePreview {
         })
     }
 
+    /// Sets the parent terminal region and recalculates pane layout.
+    ///
+    /// Positions panes in the bottom third of the region with optimal sizing.
     pub fn set_parent_region(&mut self, region: tuinix::TerminalRegion) {
         self.parent_region = region;
 
@@ -93,6 +114,7 @@ impl FilePreview {
         }
     }
 
+    /// Renders the left preview pane with a right-bordered frame and centered filename.
     pub fn render_left_pane(&self) -> (tuinix::TerminalPosition, UnicodeTerminalFrame) {
         let region = self.left_pane.region;
         let mut frame = UnicodeTerminalFrame::new(region.size);
@@ -127,6 +149,7 @@ impl FilePreview {
         (region.position, frame)
     }
 
+    /// Renders the right preview pane with a left-bordered frame and centered filename.
     pub fn render_right_pane(&self) -> (tuinix::TerminalPosition, UnicodeTerminalFrame) {
         let region = self.right_pane.region;
         let mut frame = UnicodeTerminalFrame::new(region.size);
