@@ -5,8 +5,12 @@ use tuinix::{KeyCode, KeyInput};
 pub enum KeyMatcher {
     /// Matches an exact key combination
     Literal(KeyInput),
+
     /// Matches any printable character
     PrintableChar,
+
+    /// Matches any key input
+    Any,
 }
 
 impl KeyMatcher {
@@ -25,6 +29,7 @@ impl KeyMatcher {
                     false
                 }
             }
+            KeyMatcher::Any => true,
         }
     }
 }
@@ -35,6 +40,10 @@ impl std::str::FromStr for KeyMatcher {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if s == "<PRINTABLE>" {
             return Ok(KeyMatcher::PrintableChar);
+        }
+
+        if s == "<ANY>" {
+            return Ok(KeyMatcher::Any);
         }
 
         // Handle modifier key combinations like "C-c", "M-x"
@@ -120,6 +129,7 @@ impl std::fmt::Display for KeyMatcher {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::PrintableChar => write!(f, "<PRINTABLE>"),
+            Self::Any => write!(f, "<ANY>"),
             Self::Literal(key) => {
                 if key.alt {
                     write!(f, "M-")?;
