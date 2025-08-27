@@ -203,7 +203,7 @@ impl FilePreviewPane {
     }
 
     fn desired_rows(&self) -> usize {
-        self.max_rows + 1 + 1
+        self.max_rows + 1
     }
 
     fn desired_cols(&self) -> usize {

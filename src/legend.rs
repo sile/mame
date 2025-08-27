@@ -50,13 +50,10 @@ impl<'a> Legend<'a> {
         };
 
         let mut subframe = UnicodeTerminalFrame::new(tuinix::TerminalSize::rows_cols(rows, cols));
-
         for item in &self.items {
             writeln!(subframe, "│ {item}")?;
         }
-
-        let border_cols = cols - 1; // excluding the initial "└"
-        writeln!(subframe, "└{}", centered(self.title, '─', border_cols))?;
+        writeln!(subframe, "└{}─", centered(self.title, '─', cols - 2))?;
 
         frame.draw(position, &subframe);
 
