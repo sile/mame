@@ -54,7 +54,7 @@ impl<'a> std::fmt::Display for Centered<'a> {
 
         let text_cols = str_cols(self.text);
 
-        if text_cols + 4 <= self.width {
+        if text_cols + 2 <= self.width {
             let padding_needed = self.width - text_cols - 2; // 2 for the spaces around text
             let left_padding = padding_needed / 2;
             let right_padding = padding_needed - left_padding;

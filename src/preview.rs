@@ -129,12 +129,12 @@ impl FilePreview {
         let region = self.left_pane.region;
         let mut frame = UnicodeTerminalFrame::new(region.size);
 
+        let cols = region.size.cols;
         let file_name = self.left_pane.file_name();
-        let border_cols = region.size.cols - 1; // excluding the final "┐"
-        writeln!(frame, "{}┐", centered(file_name, '─', border_cols))?;
+        writeln!(frame, "─{}┐", centered(file_name, '─', cols - 2))?;
 
         for _ in 0..region.size.rows {
-            write!(frame, "{}│", padding(' ', region.size.cols - 1))?;
+            write!(frame, "{}│", padding(' ', cols - 1))?;
         }
 
         let text_region = region.size.to_region().drop_top(1).drop_right(1);
@@ -151,9 +151,9 @@ impl FilePreview {
         let region = self.right_pane.region;
         let mut frame = UnicodeTerminalFrame::new(region.size);
 
+        let cols = region.size.cols;
         let file_name = self.right_pane.file_name();
-        let border_cols = region.size.cols - 1; // excluding the initial "┌"
-        write!(frame, "┌{}", centered(file_name, '─', border_cols))?;
+        write!(frame, "┌{}─", centered(file_name, '─', cols - 2))?;
 
         for _ in 0..region.size.rows {
             writeln!(frame, "│")?;
@@ -203,7 +203,7 @@ impl FilePreviewPane {
     }
 
     fn desired_rows(&self) -> usize {
-        self.max_rows + 1
+        self.max_rows + 1 + 1
     }
 
     fn desired_cols(&self) -> usize {
