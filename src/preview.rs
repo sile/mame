@@ -63,7 +63,6 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for FilePreviewPane
 pub struct FilePreview {
     left_pane: FilePreviewPane,
     right_pane: FilePreviewPane,
-    parent_region: tuinix::TerminalRegion,
 }
 
 impl FilePreview {
@@ -82,16 +81,26 @@ impl FilePreview {
                 .map(FilePreviewPane::new)
                 .transpose()?
                 .unwrap_or_default(),
-            parent_region: tuinix::TerminalRegion::default(),
         })
     }
 
-    /// Sets the parent terminal region and recalculates pane layout.
+    /// Renders the file preview component to the terminal frame.
     ///
-    /// Positions panes in the bottom third of the region with optimal sizing.
-    pub fn set_parent_region(&mut self, region: tuinix::TerminalRegion) {
-        self.parent_region = region;
+    /// Calculates optimal positioning for both panes and draws them with their
+    /// content and borders. The preview is positioned in the bottom third of the frame.
+    pub fn render(&mut self, frame: &mut UnicodeTerminalFrame) -> std::io::Result<()> {
+        self.calculate_pane_regions(frame.size().to_region());
 
+        let (position, subframe) = self.render_left_pane();
+        frame.draw(position, &subframe);
+
+        let (position, subframe) = self.render_right_pane();
+        frame.draw(position, &subframe);
+
+        Ok(())
+    }
+
+    fn calculate_pane_regions(&mut self, region: tuinix::TerminalRegion) {
         let pane_region = region.take_bottom(region.size.rows / 3);
         if self.left_pane.desired_cols() + self.right_pane.desired_cols() <= pane_region.size.cols {
             self.left_pane.region = pane_region
@@ -114,8 +123,7 @@ impl FilePreview {
         }
     }
 
-    /// Renders the left preview pane with a right-bordered frame and centered filename.
-    pub fn render_left_pane(&self) -> (tuinix::TerminalPosition, UnicodeTerminalFrame) {
+    fn render_left_pane(&self) -> (tuinix::TerminalPosition, UnicodeTerminalFrame) {
         let region = self.left_pane.region;
         let mut frame = UnicodeTerminalFrame::new(region.size);
 
@@ -139,8 +147,7 @@ impl FilePreview {
         (region.position, frame)
     }
 
-    /// Renders the right preview pane with a left-bordered frame and centered filename.
-    pub fn render_right_pane(&self) -> (tuinix::TerminalPosition, UnicodeTerminalFrame) {
+    fn render_right_pane(&self) -> (tuinix::TerminalPosition, UnicodeTerminalFrame) {
         let region = self.right_pane.region;
         let mut frame = UnicodeTerminalFrame::new(region.size);
 
