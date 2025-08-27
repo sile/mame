@@ -11,9 +11,9 @@
 /// # Examples
 ///
 /// ```
-/// assert_eq!(mame::str_cols("Hello"), 5);
-/// assert_eq!(mame::str_cols("こんにちは"), 10); // Japanese characters are 2 columns each
-/// assert_eq!(mame::str_cols("café"), 4);
+/// assert_eq!(mame::terminal::str_cols("Hello"), 5);
+/// assert_eq!(mame::terminal::str_cols("こんにちは"), 10); // Japanese characters are 2 columns each
+/// assert_eq!(mame::terminal::str_cols("café"), 4);
 /// ```
 pub fn str_cols(s: &str) -> usize {
     unicode_width::UnicodeWidthStr::width(s)
@@ -28,9 +28,9 @@ pub fn str_cols(s: &str) -> usize {
 /// # Examples
 ///
 /// ```
-/// assert_eq!(mame::char_cols('A'), 1);
-/// assert_eq!(mame::char_cols('あ'), 2); // Japanese character is 2 columns wide
-/// assert_eq!(mame::char_cols('\u{0301}'), 0); // Combining acute accent has no width
+/// assert_eq!(mame::terminal::char_cols('A'), 1);
+/// assert_eq!(mame::terminal::char_cols('あ'), 2); // Japanese character is 2 columns wide
+/// assert_eq!(mame::terminal::char_cols('\u{0301}'), 0); // Combining acute accent has no width
 /// ```
 pub fn char_cols(c: char) -> usize {
     unicode_width::UnicodeWidthChar::width(c).unwrap_or(0)
@@ -62,7 +62,7 @@ pub type UnicodeTerminalFrame = tuinix::TerminalFrame<UnicodeCharWidthEstimator>
 ///
 /// ```
 /// use tuinix::{TerminalFrame, TerminalSize, EstimateCharWidth};
-/// # use mame::UnicodeCharWidthEstimator;
+/// # use mame::terminal::UnicodeCharWidthEstimator;
 ///
 /// let estimator = UnicodeCharWidthEstimator;
 /// assert_eq!(estimator.estimate_char_width('A'), 1);
