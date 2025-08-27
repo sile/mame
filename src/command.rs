@@ -9,17 +9,36 @@ use std::path::PathBuf;
 
 use crate::io_error;
 
+/// Configuration for executing an external command with customizable I/O handling.
 #[derive(Debug, Clone)]
 pub struct ExternalCommand {
+    /// Path to the executable command
     pub name: PathBuf,
+
+    /// Command line arguments to pass to the executable
     pub args: Vec<String>,
+
+    /// Environment variables to set for the command execution
     pub envs: BTreeMap<String, String>,
+
+    /// Configuration for handling stdin input
     pub stdin: CommandInput,
+
+    /// Configuration for handling stdout output
     pub stdout: CommandOutput,
+
+    /// Configuration for handling stderr output
     pub stderr: CommandOutput,
 }
 
 impl ExternalCommand {
+    /// Executes the external command with configured I/O handling.
+    ///
+    /// Spawns the process with the specified arguments and environment variables,
+    /// handles stdin input, waits for completion, and processes stdout/stderr
+    /// according to the configured output settings.
+    ///
+    /// Returns the complete process output including exit status and captured streams.
     pub fn execute(&self) -> std::io::Result<std::process::Output> {
         let mut cmd = std::process::Command::new(&self.name);
         for arg in &self.args {
@@ -88,14 +107,22 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ExternalCommand
     }
 }
 
+/// Configuration for providing input to a command's stdin.
 #[derive(Debug, Default, Clone)]
 pub enum CommandInput {
+    /// No input provided (default)
     #[default]
     Null,
+
+    /// Input from a text string
     Text {
+        /// The text content to write to stdin
         text: String,
     },
+
+    /// Input from a file
     File {
+        /// Path to the file whose contents will be piped to stdin
         path: PathBuf,
     },
 }
@@ -137,13 +164,22 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for CommandInput {
     }
 }
 
+/// Configuration for handling command output (stdout/stderr).
 #[derive(Debug, Default, Clone)]
 pub enum CommandOutput {
+    /// Discard the output (default)
     #[default]
     Null,
+
+    /// Write output to a file
     File {
+        /// Path to the output file
         path: PathBuf,
+
+        /// Whether to append to existing file content
         append: bool,
+
+        /// Skip writing if the output is empty
         skip_if_empty: bool,
     },
 }
@@ -197,18 +233,30 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for CommandOutput {
     }
 }
 
+/// Wrapper for executing shell commands and scripts with configurable I/O handling.
+///
+/// `ShellCommand` is a specialized version of `ExternalCommand` that automatically
+/// configures the shell (using the `SHELL` environment variable or defaulting to "sh")
+/// and formats script arguments with the `-c` flag for shell execution.
 #[derive(Debug, Clone)]
 pub struct ShellCommand(ExternalCommand);
 
 impl ShellCommand {
+    /// Executes the shell command with configured I/O handling.
+    ///
+    /// Delegates to the underlying `ExternalCommand::execute()` method to spawn
+    /// the shell process, handle stdin/stdout/stderr according to configuration,
+    /// and return the complete process output.
     pub fn execute(&self) -> std::io::Result<std::process::Output> {
         self.0.execute()
     }
 
+    /// Returns a reference to the underlying `ExternalCommand` configuration.
     pub fn get(&self) -> &ExternalCommand {
         &self.0
     }
 
+    /// Returns a mutable reference to the underlying `ExternalCommand` configuration.
     pub fn get_mut(&mut self) -> &mut ExternalCommand {
         &mut self.0
     }
