@@ -131,12 +131,10 @@ impl FilePreview {
 
         let file_name = self.left_pane.file_name();
         let border_cols = region.size.cols - 1; // excluding the final "┐"
-        write!(frame, "{}", centered(file_name, '─', border_cols))?;
-        writeln!(frame, "┐").expect("infallible");
+        writeln!(frame, "{}┐", centered(file_name, '─', border_cols))?;
 
         for _ in 0..region.size.rows {
-            write!(frame, "{}", padding(' ', region.size.cols - 1))?;
-            writeln!(frame, "│").expect("infallible");
+            write!(frame, "{}│", padding(' ', region.size.cols - 1))?;
         }
 
         let text_region = region.size.to_region().drop_top(1).drop_right(1);
@@ -153,10 +151,9 @@ impl FilePreview {
         let region = self.right_pane.region;
         let mut frame = UnicodeTerminalFrame::new(region.size);
 
-        let file_name = self.left_pane.file_name();
+        let file_name = self.right_pane.file_name();
         let border_cols = region.size.cols - 1; // excluding the initial "┌"
-        write!(frame, "┌").expect("infallible");
-        write!(frame, "{}", centered(file_name, '─', border_cols))?;
+        write!(frame, "┌{}", centered(file_name, '─', border_cols))?;
 
         for _ in 0..region.size.rows {
             writeln!(frame, "│")?;
