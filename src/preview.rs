@@ -88,13 +88,13 @@ impl FilePreview {
     ///
     /// Calculates optimal positioning for both panes and draws them with their
     /// content and borders. The preview is positioned in the bottom third of the frame.
-    pub fn render(&mut self, frame: &mut UnicodeTerminalFrame) -> std::io::Result<()> {
+    pub fn render(&mut self, frame: &mut UnicodeTerminalFrame) -> std::fmt::Result {
         self.calculate_pane_regions(frame.size().to_region());
 
-        let (position, subframe) = self.render_left_pane();
+        let (position, subframe) = self.render_left_pane()?;
         frame.draw(position, &subframe);
 
-        let (position, subframe) = self.render_right_pane();
+        let (position, subframe) = self.render_right_pane()?;
         frame.draw(position, &subframe);
 
         Ok(())
@@ -123,52 +123,51 @@ impl FilePreview {
         }
     }
 
-    fn render_left_pane(&self) -> (tuinix::TerminalPosition, UnicodeTerminalFrame) {
+    fn render_left_pane(
+        &self,
+    ) -> Result<(tuinix::TerminalPosition, UnicodeTerminalFrame), std::fmt::Error> {
         let region = self.left_pane.region;
         let mut frame = UnicodeTerminalFrame::new(region.size);
 
         let file_name = self.left_pane.file_name();
         let border_cols = region.size.cols - 1; // excluding the final "┐"
-        write!(frame, "{}", centered(file_name, '─', border_cols)).expect("infallible");
+        write!(frame, "{}", centered(file_name, '─', border_cols))?;
         writeln!(frame, "┐").expect("infallible");
 
         for _ in 0..region.size.rows {
-            write!(frame, "{}", padding(' ', region.size.cols - 1)).expect("infallible");
+            write!(frame, "{}", padding(' ', region.size.cols - 1))?;
             writeln!(frame, "│").expect("infallible");
         }
 
         let text_region = region.size.to_region().drop_top(1).drop_right(1);
         let mut text_frame = UnicodeTerminalFrame::new(text_region.size);
-        self.left_pane
-            .render_text(&mut text_frame)
-            .expect("infallible");
+        self.left_pane.render_text(&mut text_frame)?;
         frame.draw(text_region.position, &text_frame);
 
-        (region.position, frame)
+        Ok((region.position, frame))
     }
 
-    fn render_right_pane(&self) -> (tuinix::TerminalPosition, UnicodeTerminalFrame) {
+    fn render_right_pane(
+        &self,
+    ) -> Result<(tuinix::TerminalPosition, UnicodeTerminalFrame), std::fmt::Error> {
         let region = self.right_pane.region;
         let mut frame = UnicodeTerminalFrame::new(region.size);
 
         let file_name = self.left_pane.file_name();
         let border_cols = region.size.cols - 1; // excluding the initial "┌"
-        write!(frame, "{}", centered(file_name, '─', border_cols)).expect("infallible");
         write!(frame, "┌").expect("infallible");
-        write!(frame, "{}", centered(file_name, '─', border_cols)).expect("infallible");
+        write!(frame, "{}", centered(file_name, '─', border_cols))?;
 
         for _ in 0..region.size.rows {
-            writeln!(frame, "│").expect("infallible");
+            writeln!(frame, "│")?;
         }
 
         let text_region = region.size.to_region().drop_top(1).drop_left(1);
         let mut text_frame = UnicodeTerminalFrame::new(text_region.size);
-        self.right_pane
-            .render_text(&mut text_frame)
-            .expect("infallible");
+        self.right_pane.render_text(&mut text_frame)?;
         frame.draw(text_region.position, &text_frame);
 
-        (region.position, frame)
+        Ok((region.position, frame))
     }
 }
 
