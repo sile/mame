@@ -15,6 +15,7 @@ pub fn padding(ch: char, count: usize) -> impl std::fmt::Display {
 ///
 /// The text is surrounded by spaces and padded with the specified character to fill the total width.
 /// If the text (plus surrounding spaces) is too long to fit, returns padding characters for the full width.
+/// If the text is empty, returns padding characters for the full width without spaces.
 pub fn centered(text: &str, padding_ch: char, width: usize) -> impl std::fmt::Display + '_ {
     Centered {
         text,
@@ -47,6 +48,10 @@ struct Centered<'a> {
 
 impl<'a> std::fmt::Display for Centered<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.text.is_empty() {
+            return write!(f, "{}", padding(self.padding_ch, self.width));
+        }
+
         let text_cols = str_cols(self.text);
 
         if text_cols + 4 <= self.width {
