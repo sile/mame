@@ -40,15 +40,23 @@ where
     Ok(value)
 }
 
+/// Errors that can occur when loading and parsing JSON/JSONC files.
 #[derive(Debug)]
 pub enum LoadJsonError {
+    /// I/O error occurred while reading a file.
     Io {
+        /// Path to the file that couldn't be read
         path: PathBuf,
+        /// The underlying I/O error
         error: std::io::Error,
     },
+    /// JSON parsing error occurred while processing file content.
     Json {
+        /// Path to the file containing invalid JSON
         path: PathBuf,
+        /// The text content that failed to parse
         text: String,
+        /// The underlying JSON parsing error
         error: nojson::JsonParseError,
     },
 }
