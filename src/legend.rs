@@ -6,7 +6,7 @@
 //! calculate proper sizing based on content width.
 use std::fmt::Write;
 
-use crate::fmt::centered;
+use crate::fmt::horizontal_border;
 use crate::terminal::{UnicodeTerminalFrame, str_cols};
 
 /// A bordered legend box that displays a list of items with a title.
@@ -53,7 +53,7 @@ impl<'a> Legend<'a> {
         for item in &self.items {
             writeln!(subframe, "│ {item}")?;
         }
-        writeln!(subframe, "└{}─", centered(self.title, '─', cols - 2))?;
+        writeln!(subframe, "└{}─", horizontal_border(self.title, cols - 2))?;
 
         frame.draw(position, &subframe);
 

@@ -11,19 +11,6 @@ pub fn padding(ch: char, count: usize) -> impl std::fmt::Display {
     Padding { ch, count }
 }
 
-/// Creates a centered text with padding characters on both sides to fit within the specified width.
-///
-/// The text is surrounded by spaces and padded with the specified character to fill the total width.
-/// If the text (plus surrounding spaces) is too long to fit, returns padding characters for the full width.
-/// If the text is empty, returns padding characters for the full width without spaces.
-pub fn centered(text: &str, padding_ch: char, width: usize) -> impl std::fmt::Display + '_ {
-    Centered {
-        text,
-        padding_ch,
-        width,
-    }
-}
-
 #[derive(Debug)]
 struct Padding {
     ch: char,
@@ -39,33 +26,30 @@ impl std::fmt::Display for Padding {
     }
 }
 
+pub(crate) fn horizontal_border(text: &str, width: usize) -> impl std::fmt::Display {
+    HorizontalBorder { text, width }
+}
+
 #[derive(Debug)]
-struct Centered<'a> {
+struct HorizontalBorder<'a> {
     text: &'a str,
-    padding_ch: char,
     width: usize,
 }
 
-impl<'a> std::fmt::Display for Centered<'a> {
+impl<'a> std::fmt::Display for HorizontalBorder<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if self.text.is_empty() {
-            return write!(f, "{}", padding(self.padding_ch, self.width));
-        }
-
         let text_cols = str_cols(self.text);
-
-        if text_cols + 2 <= self.width {
+        if 0 < text_cols && text_cols + 2 <= self.width {
             let padding_needed = self.width - text_cols - 2; // 2 for the spaces around text
             let left_padding = padding_needed / 2;
             let right_padding = padding_needed - left_padding;
 
-            write!(f, "{}", padding(self.padding_ch, left_padding))?;
+            write!(f, "{}", padding('─', left_padding))?;
             write!(f, " {} ", self.text)?;
-            write!(f, "{}", padding(self.padding_ch, right_padding))?;
+            write!(f, "{}", padding('─', right_padding))?;
         } else {
-            write!(f, "{}", padding(self.padding_ch, self.width))?;
+            write!(f, "{}", padding('─', self.width))?;
         }
-
         Ok(())
     }
 }

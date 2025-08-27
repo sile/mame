@@ -6,7 +6,7 @@
 use std::fmt::Write;
 use std::path::PathBuf;
 
-use crate::fmt::{centered, padding};
+use crate::fmt::{horizontal_border, padding};
 use crate::io_error;
 use crate::terminal::{UnicodeTerminalFrame, str_cols};
 
@@ -131,7 +131,7 @@ impl FilePreview {
 
         let cols = region.size.cols;
         let file_name = self.left_pane.file_name();
-        writeln!(frame, "─{}┐", centered(file_name, '─', cols - 2))?;
+        writeln!(frame, "─{}┐", horizontal_border(file_name, cols - 2))?;
 
         for _ in 0..region.size.rows {
             write!(frame, "{}│", padding(' ', cols - 1))?;
@@ -153,7 +153,7 @@ impl FilePreview {
 
         let cols = region.size.cols;
         let file_name = self.right_pane.file_name();
-        write!(frame, "┌{}─", centered(file_name, '─', cols - 2))?;
+        write!(frame, "┌{}─", horizontal_border(file_name, cols - 2))?;
 
         for _ in 0..region.size.rows {
             writeln!(frame, "│")?;
