@@ -1,6 +1,11 @@
 mame
 ====
 
+[![mame](https://img.shields.io/crates/v/mame.svg)](https://crates.io/crates/mame)
+[![Documentation](https://docs.rs/mame/badge.svg)](https://docs.rs/mame)
+[![Actions Status](https://github.com/sile/mame/workflows/CI/badge.svg)](https://github.com/sile/mame/actions)
+![License](https://img.shields.io/crates/l/mame)
+
 This library provides common building blocks to build TUI (Terminal User Interface) applications.
 
 "mame (豆)" means "bean" in Japanese.
