@@ -186,7 +186,7 @@ impl<'text, 'raw> VariableResolver<'text, 'raw> {
         for (position, value) in unchecked_references {
             let name = value.to_unquoted_string_str()?;
             if !definitions.contains_key(name.as_ref()) {
-                return Err(value.invalid(format!("undefined variable name")));
+                return Err(value.invalid("undefined variable name".to_string()));
             }
             references.insert(position, name.into_owned());
         }
