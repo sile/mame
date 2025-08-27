@@ -6,7 +6,7 @@
 use std::fmt::Write;
 use std::path::PathBuf;
 
-use crate::fmt::padding;
+use crate::fmt::{centered, padding};
 use crate::io_error;
 use crate::terminal::{UnicodeTerminalFrame, str_cols};
 
@@ -118,20 +118,10 @@ impl FilePreview {
     pub fn render_left_pane(&self) -> (tuinix::TerminalPosition, UnicodeTerminalFrame) {
         let region = self.left_pane.region;
         let mut frame = UnicodeTerminalFrame::new(region.size);
-        let file_name_cols = str_cols(self.left_pane.file_name());
-        if file_name_cols + 4 <= region.size.cols {
-            // Center-align the file name in the available space
-            let available_space = region.size.cols - 2; // excluding the final "┐"
-            let padding_needed = available_space - file_name_cols - 2; // 2 for the spaces around filename
-            let left_padding = padding_needed / 2;
-            let right_padding = padding_needed - left_padding;
 
-            write!(frame, "{}", padding('─', left_padding)).expect("infallible");
-            write!(frame, " {} ", self.left_pane.file_name()).expect("infallible");
-            write!(frame, "{}", padding('─', right_padding)).expect("infallible");
-        } else {
-            write!(frame, "{}", padding('─', region.size.cols - 1)).expect("infallible");
-        }
+        let file_name = self.left_pane.file_name();
+        let border_cols = region.size.cols - 1; // excluding the final "┐"
+        write!(frame, "{}", centered(file_name, '─', border_cols)).expect("infallible");
         writeln!(frame, "┐").expect("infallible");
 
         for _ in 0..region.size.rows {
@@ -153,21 +143,12 @@ impl FilePreview {
     pub fn render_right_pane(&self) -> (tuinix::TerminalPosition, UnicodeTerminalFrame) {
         let region = self.right_pane.region;
         let mut frame = UnicodeTerminalFrame::new(region.size);
-        let file_name_cols = str_cols(self.right_pane.file_name());
-        write!(frame, "┌").expect("infallible");
-        if file_name_cols + 4 <= region.size.cols {
-            // Center-align the file name in the available space
-            let available_space = region.size.cols - 1; // excluding the initial "┌"
-            let padding_needed = available_space - file_name_cols - 2; // 2 for the spaces around filename
-            let left_padding = padding_needed / 2;
-            let right_padding = padding_needed - left_padding;
 
-            write!(frame, "{}", padding('─', left_padding)).expect("infallible");
-            write!(frame, " {} ", self.right_pane.file_name()).expect("infallible");
-            write!(frame, "{}", padding('─', right_padding)).expect("infallible");
-        } else {
-            write!(frame, "{}", padding('─', region.size.cols - 1)).expect("infallible");
-        }
+        let file_name = self.left_pane.file_name();
+        let border_cols = region.size.cols - 1; // excluding the initial "┌"
+        write!(frame, "{}", centered(file_name, '─', border_cols)).expect("infallible");
+        write!(frame, "┌").expect("infallible");
+        write!(frame, "{}", centered(file_name, '─', border_cols)).expect("infallible");
 
         for _ in 0..region.size.rows {
             writeln!(frame, "│").expect("infallible");

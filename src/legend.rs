@@ -6,7 +6,7 @@
 //! calculate proper sizing based on content width.
 use std::fmt::Write;
 
-use crate::fmt::padding;
+use crate::fmt::{centered, padding};
 use crate::terminal::{UnicodeTerminalFrame, str_cols};
 
 /// Renders a bordered legend box containing a list of items with an optional title.
@@ -32,14 +32,12 @@ where
         writeln!(frame, "│ {item} ").expect("infallible");
     }
 
+    let border_cols = cols - 1; // excluding the initial "└"
     write!(frame, "└").expect("infallible");
     if title.is_empty() {
-        write!(frame, "{}", padding('─', cols - 1)).expect("infallible");
+        write!(frame, "{}", padding('─', border_cols)).expect("infallible");
     } else {
-        let offset = (cols - (title.len() + 2)) / 2;
-        write!(frame, "{}", padding('─', offset - 1)).expect("infallible");
-        write!(frame, " {title} ").expect("infallible");
-        write!(frame, "{}", padding('─', cols - (offset + title.len() + 2))).expect("infallible");
+        write!(frame, "{}", centered(title, '─', border_cols)).expect("infallible");
     }
     writeln!(frame).expect("infallible");
 
