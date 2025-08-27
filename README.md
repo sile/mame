@@ -1,7 +1,7 @@
 mame
 ====
 
-Common building blocks to build TUI (Terminal User Interface) applications.
+This library provides common building blocks to build TUI (Terminal User Interface) applications.
 
 "mame (豆)" means "bean" in Japanese.
 Just like beans are versatile ingredients that can be transformed into countless dishes - from miso soup to tofu, from coffee to chocolate -

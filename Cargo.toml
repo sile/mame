@@ -2,15 +2,17 @@
 name = "mame"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.88"
 authors = ["Takeru Ohta <phjgt308@gmail.com>"]
 license = "MIT"
 description = "Common building blocks to build TUI applications."
 homepage = "https://github.com/sile/mame"
 repository = "https://github.com/sile/mame"
 readme = "README.md"
+categories = ["command-line-interface"]
 
 [dependencies]
-nojson = "0.3.2"
+nojson = "0.3.4"
 tuinix = "0.3.2"
 unicode-width = "0.2.1"
 
