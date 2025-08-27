@@ -1,3 +1,8 @@
+//! File preview utilities for terminal UI components.
+//!
+//! This module provides functionality to create bordered file preview panes that display
+//! file contents in a terminal interface. The previews support side-by-side layout with
+//! automatic sizing and use Unicode box-drawing characters for borders.
 use std::fmt::Write;
 use std::path::PathBuf;
 

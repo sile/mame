@@ -1,3 +1,5 @@
+//! Unicode-aware terminal utilities for character width calculation and rendering.
+
 /// Calculates the display width of a string in terminal columns.
 ///
 /// This function uses Unicode width calculation to determine how many columns
