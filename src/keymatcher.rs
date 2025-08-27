@@ -14,6 +14,7 @@ pub enum KeyMatcher {
 }
 
 impl KeyMatcher {
+    /// Returns `true` if the given key input matches this matcher pattern.
     pub fn matches(self, key: KeyInput) -> bool {
         match self {
             KeyMatcher::Literal(k) => k == key,

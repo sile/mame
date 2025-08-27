@@ -11,11 +11,16 @@ use crate::keybinding::KeymapRegistry;
 pub use crate::keybinding::{Keybinding, Keymap};
 pub use crate::keymatcher::KeyMatcher;
 
+/// Marker trait for types that can be deserialized from JSON as action definitions.
 pub trait Action:
     for<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>, Error = nojson::JsonParseError>
 {
 }
 
+/// Configuration for a context-aware action system with keybindings.
+///
+/// Manages multiple keymaps organized by context, with an optional setup action
+/// and the ability to switch between different input contexts at runtime.
 #[derive(Debug)]
 pub struct ActionConfig<A> {
     context: String,
@@ -24,18 +29,22 @@ pub struct ActionConfig<A> {
 }
 
 impl<A: Action> ActionConfig<A> {
-    pub fn load_file<P: AsRef<Path>>(path: P) -> Result<Self, LoadJsonError> {
+    /// Loads an action configuration from a JSONC file.
+    pub fn load_from_file<P: AsRef<Path>>(path: P) -> Result<Self, LoadJsonError> {
         crate::json::load_jsonc_file(path, |v| ActionConfig::try_from(v))
     }
 
-    pub fn load_str(name: &str, text: &str) -> Result<Self, LoadJsonError> {
+    /// Loads an action configuration from a JSONC string.
+    pub fn load_from_str(name: &str, text: &str) -> Result<Self, LoadJsonError> {
         crate::json::load_jsonc_str(name, text, |v| ActionConfig::try_from(v))
     }
 
+    /// Returns the optional setup action that runs during initialization.
     pub fn setup_action(&self) -> Option<&A> {
         self.setup_action.as_ref()
     }
 
+    /// Sets the current context if it exists, returning true on success.
     pub fn set_current_context(&mut self, context: &str) -> bool {
         if self.keymap_registry.contexts.contains_key(context) {
             self.context = context.to_owned();
@@ -45,18 +54,22 @@ impl<A: Action> ActionConfig<A> {
         }
     }
 
+    /// Returns the name of the currently active context.
     pub fn current_context(&self) -> &str {
         &self.context
     }
 
+    /// Returns the keymap for the currently active context.
     pub fn current_keymap(&self) -> &Keymap<A> {
         &self.keymap_registry.contexts[&self.context]
     }
 
+    /// Returns the keymap for the specified context, if it exists.
     pub fn get_keymap(&self, context: &str) -> Option<&Keymap<A>> {
         self.keymap_registry.contexts.get(context)
     }
 
+    /// Returns an iterator over all contexts and their associated keymaps.
     pub fn keymaps(&self) -> impl '_ + Iterator<Item = (&str, &Keymap<A>)> {
         self.keymap_registry
             .contexts
