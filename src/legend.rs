@@ -9,31 +9,57 @@ use std::fmt::Write;
 use crate::fmt::centered;
 use crate::terminal::{UnicodeTerminalFrame, str_cols};
 
-/// Renders a bordered legend box containing a list of items with an optional title.
+/// A bordered legend box that displays a list of items with a title.
 ///
-/// Creates a Unicode terminal frame with box-drawing characters that displays
-/// the provided items in a vertical list. If a title is provided, it's centered
-/// in the bottom border; otherwise, the border is a plain horizontal line.
-pub fn render_legend<I, T>(title: &str, items: I) -> UnicodeTerminalFrame
-where
-    I: Iterator<Item = T>,
-    T: std::fmt::Display,
-{
-    let items = items.map(|x| x.to_string()).collect::<Vec<_>>();
-    let rows = items.len() + 1; // 1 = "─"
-    let cols = std::iter::once(title.len() + 4) // 4 = "└ " + " ─"
-        .chain(items.iter().map(|x| str_cols(x) + 2)) // 2 = "│ "
-        .max()
-        .expect("infallible");
+/// Renders as a Unicode box with vertical borders containing the items and
+/// a bottom border with the centered title. Automatically sizes to fit content.
+#[derive(Debug)]
+pub struct Legend<'a> {
+    title: &'a str,
+    items: Vec<String>,
+}
 
-    let mut frame = UnicodeTerminalFrame::new(tuinix::TerminalSize::rows_cols(rows, cols));
-
-    for item in &items {
-        writeln!(frame, "│ {item} ").expect("infallible");
+impl<'a> Legend<'a> {
+    /// Creates a new legend with the given title and items.
+    pub fn new<I, T>(title: &'a str, items: I) -> Self
+    where
+        I: Iterator<Item = T>,
+        T: std::fmt::Display,
+    {
+        Self {
+            title,
+            items: items.map(|x| x.to_string()).collect(),
+        }
     }
 
-    let border_cols = cols - 1; // excluding the initial "└"
-    writeln!(frame, "└{}", centered(title, '─', border_cols)).expect("infallible");
+    /// Renders the legend to the right edge of the frame if it fits.
+    pub fn render(&self, frame: &mut UnicodeTerminalFrame) -> std::fmt::Result {
+        let rows = self.items.len() + 1; // 1 = "─"
+        let cols = std::iter::once(self.title.len() + 4) // 4 = "└ " + " ─"
+            .chain(self.items.iter().map(|x| str_cols(x) + 2)) // 2 = "│ "
+            .max()
+            .expect("infallible");
+        let Some(position) = frame
+            .size()
+            .cols
+            .checked_sub(cols)
+            .map(tuinix::TerminalPosition::col)
+            .filter(|_| rows < frame.size().rows)
+        else {
+            return Ok(());
+        };
 
-    frame
+        let mut subframe = UnicodeTerminalFrame::new(tuinix::TerminalSize::rows_cols(rows, cols));
+
+        for item in &self.items {
+            writeln!(subframe, "│ {item}")?;
+        }
+
+        let border_cols = cols - 1; // excluding the initial "└"
+        writeln!(subframe, "└{}", centered(self.title, '─', border_cols))?;
+
+        frame.draw(position, &subframe);
+
+        Ok(())
+    }
 }
