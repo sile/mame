@@ -9,6 +9,7 @@ use crate::json::LoadJsonError;
 use crate::keybinding::KeymapRegistry;
 
 pub use crate::keybinding::{Keybinding, Keymap};
+pub use crate::keymatcher::KeyMatcher;
 
 pub trait Action:
     for<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>, Error = nojson::JsonParseError>

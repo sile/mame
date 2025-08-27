@@ -1,8 +1,11 @@
 use tuinix::{KeyCode, KeyInput};
 
+/// Matches keyboard input against specific patterns.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum KeyMatcher {
+    /// Matches an exact key combination
     Literal(KeyInput),
+    /// Matches any printable character
     PrintableChar,
 }
 
