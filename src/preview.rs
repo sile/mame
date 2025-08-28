@@ -130,6 +130,10 @@ impl FilePreview {
         let mut frame = UnicodeTerminalFrame::new(region.size);
 
         let cols = region.size.cols;
+        if cols < 2 {
+            return Ok((region.position, frame));
+        }
+
         let file_name = self.left_pane.file_name();
         writeln!(frame, "─{}┐", horizontal_border(file_name, cols - 2))?;
 
@@ -152,6 +156,10 @@ impl FilePreview {
         let mut frame = UnicodeTerminalFrame::new(region.size);
 
         let cols = region.size.cols;
+        if cols < 2 {
+            return Ok((region.position, frame));
+        }
+
         let file_name = self.right_pane.file_name();
         write!(frame, "┌{}─", horizontal_border(file_name, cols - 2))?;
 
