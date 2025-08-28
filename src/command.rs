@@ -13,7 +13,7 @@ use crate::io_error;
 #[derive(Debug, Clone)]
 pub struct ExternalCommand {
     /// Path to the executable command
-    pub name: PathBuf,
+    pub command: PathBuf,
 
     /// Command line arguments to pass to the executable
     pub args: Vec<String>,
@@ -40,7 +40,7 @@ impl ExternalCommand {
     ///
     /// Returns the complete process output including exit status and captured streams.
     pub fn execute(&self) -> std::io::Result<std::process::Output> {
-        let mut cmd = std::process::Command::new(&self.name);
+        let mut cmd = std::process::Command::new(&self.command);
         for arg in &self.args {
             cmd.arg(arg);
         }
@@ -52,28 +52,36 @@ impl ExternalCommand {
         cmd.stderr(std::process::Stdio::piped());
 
         let mut child = cmd.spawn().map_err(|e| {
-            let name = self.name.display();
+            let name = self.command.display();
             io_error(e, &format!("failed to execute command '{name}'"))
         })?;
 
         self.stdin.handle_input(child.stdin.take()).map_err(|e| {
-            let name = self.name.display();
+            let name = self.command.display();
             io_error(e, &format!("failed to write stdin to command '{name}'"))
         })?;
         let output = child.wait_with_output().map_err(|e| {
-            let name = self.name.display();
+            let name = self.command.display();
             io_error(e, &format!("failed to wait for command '{name}'"))
         })?;
         self.stdout.handle_output(&output.stdout).map_err(|e| {
-            let name = self.name.display();
+            let name = self.command.display();
             io_error(e, &format!("failed to handle stdout from command '{name}'"))
         })?;
         self.stderr.handle_output(&output.stderr).map_err(|e| {
-            let name = self.name.display();
+            let name = self.command.display();
             io_error(e, &format!("failed to handle stderr from command '{name}'"))
         })?;
 
         Ok(output)
+    }
+
+    /// Returns a command line representation that combines the command and args fields for display purposes.
+    pub fn command_line(&self) -> impl '_ + std::fmt::Display {
+        CommandLine {
+            command: &self.command,
+            args: &self.args,
+        }
     }
 }
 
@@ -82,7 +90,7 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ExternalCommand
 
     fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
         Ok(Self {
-            name: value.to_member("name")?.required()?.try_into()?,
+            command: value.to_member("command")?.required()?.try_into()?,
             args: value
                 .to_member("args")?
                 .map(Vec::try_from)?
@@ -272,8 +280,8 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ShellCommand {
         }
 
         Ok(Self(ExternalCommand {
-            name: value
-                .to_member("name")?
+            command: value
+                .to_member("shell")?
                 .map(PathBuf::try_from)?
                 .unwrap_or_else(|| {
                     PathBuf::from(std::env::var("SHELL").unwrap_or_else(|_| "sh".to_owned()))
@@ -296,5 +304,30 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ShellCommand {
                 .map(TryFrom::try_from)?
                 .unwrap_or_default(),
         }))
+    }
+}
+
+struct CommandLine<'a> {
+    command: &'a PathBuf,
+    args: &'a [String],
+}
+
+impl<'a> std::fmt::Display for CommandLine<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.command.display())?;
+        for arg in self.args {
+            if arg.is_empty() {
+                write!(f, " ''")?;
+            } else if arg
+                .chars()
+                .all(|c| c.is_alphanumeric() || "-_./=".contains(c))
+            {
+                write!(f, " {arg}")?;
+            } else {
+                // Shell escaping: replace single quotes with '"'"' to safely quote arguments
+                write!(f, " '{}'", arg.replace('\'', r#"'"'"'"#))?;
+            }
+        }
+        Ok(())
     }
 }
