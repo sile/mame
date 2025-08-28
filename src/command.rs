@@ -13,7 +13,7 @@ use crate::io_error;
 #[derive(Debug, Clone)]
 pub struct ExternalCommand {
     /// Path to the executable command
-    pub name: PathBuf,
+    pub command: PathBuf,
 
     /// Command line arguments to pass to the executable
     pub args: Vec<String>,
@@ -40,7 +40,7 @@ impl ExternalCommand {
     ///
     /// Returns the complete process output including exit status and captured streams.
     pub fn execute(&self) -> std::io::Result<std::process::Output> {
-        let mut cmd = std::process::Command::new(&self.name);
+        let mut cmd = std::process::Command::new(&self.command);
         for arg in &self.args {
             cmd.arg(arg);
         }
@@ -52,24 +52,24 @@ impl ExternalCommand {
         cmd.stderr(std::process::Stdio::piped());
 
         let mut child = cmd.spawn().map_err(|e| {
-            let name = self.name.display();
+            let name = self.command.display();
             io_error(e, &format!("failed to execute command '{name}'"))
         })?;
 
         self.stdin.handle_input(child.stdin.take()).map_err(|e| {
-            let name = self.name.display();
+            let name = self.command.display();
             io_error(e, &format!("failed to write stdin to command '{name}'"))
         })?;
         let output = child.wait_with_output().map_err(|e| {
-            let name = self.name.display();
+            let name = self.command.display();
             io_error(e, &format!("failed to wait for command '{name}'"))
         })?;
         self.stdout.handle_output(&output.stdout).map_err(|e| {
-            let name = self.name.display();
+            let name = self.command.display();
             io_error(e, &format!("failed to handle stdout from command '{name}'"))
         })?;
         self.stderr.handle_output(&output.stderr).map_err(|e| {
-            let name = self.name.display();
+            let name = self.command.display();
             io_error(e, &format!("failed to handle stderr from command '{name}'"))
         })?;
 
@@ -82,7 +82,7 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ExternalCommand
 
     fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
         Ok(Self {
-            name: value.to_member("name")?.required()?.try_into()?,
+            command: value.to_member("command")?.required()?.try_into()?,
             args: value
                 .to_member("args")?
                 .map(Vec::try_from)?
@@ -272,8 +272,8 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ShellCommand {
         }
 
         Ok(Self(ExternalCommand {
-            name: value
-                .to_member("name")?
+            command: value
+                .to_member("shell")?
                 .map(PathBuf::try_from)?
                 .unwrap_or_else(|| {
                     PathBuf::from(std::env::var("SHELL").unwrap_or_else(|_| "sh".to_owned()))
