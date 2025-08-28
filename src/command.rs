@@ -75,6 +75,14 @@ impl ExternalCommand {
 
         Ok(output)
     }
+
+    /// Returns a command line representation that combines the command and args fields for display purposes.
+    pub fn command_line(&self) -> impl '_ + std::fmt::Display {
+        CommandLine {
+            command: &self.command,
+            args: &self.args,
+        }
+    }
 }
 
 impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ExternalCommand {
@@ -296,5 +304,29 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ShellCommand {
                 .map(TryFrom::try_from)?
                 .unwrap_or_default(),
         }))
+    }
+}
+
+struct CommandLine<'a> {
+    command: &'a PathBuf,
+    args: &'a [String],
+}
+
+impl<'a> std::fmt::Display for CommandLine<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.command.display())?;
+        for arg in self.args {
+            if arg.is_empty() {
+                write!(f, " ''")?;
+            } else if arg
+                .chars()
+                .all(|c| c.is_alphanumeric() || "-_./=".contains(c))
+            {
+                write!(f, " {arg}")?;
+            } else {
+                write!(f, " '{}'", arg.replace('\'', "'\"'\"'"))?;
+            }
+        }
+        Ok(())
     }
 }
