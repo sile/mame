@@ -324,7 +324,8 @@ impl<'a> std::fmt::Display for CommandLine<'a> {
             {
                 write!(f, " {arg}")?;
             } else {
-                write!(f, " '{}'", arg.replace('\'', "'\"'\"'"))?;
+                // Shell escaping: replace single quotes with '"'"' to safely quote arguments
+                write!(f, " '{}'", arg.replace('\'', r#"'"'"'"#))?;
             }
         }
         Ok(())
