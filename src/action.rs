@@ -44,6 +44,29 @@ impl<A: Action> ActionConfig<A> {
         self.setup_action.as_ref()
     }
 
+    /// Processes terminal input and returns the matching keybinding, if any.
+    ///
+    /// This method takes terminal input (typically keyboard events) and attempts to match it
+    /// against the current context's keybindings. If a matching keybinding is found and it
+    /// specifies a context change, the active context will be switched before returning the
+    /// binding.
+    pub fn handle_input(&mut self, input: tuinix::TerminalInput) -> Option<&Keybinding<A>> {
+        let tuinix::TerminalInput::Key(key) = input else {
+            return None;
+        };
+
+        let binding = self
+            .keymap_registry
+            .contexts
+            .get(&self.context)?
+            .get_binding(key)?;
+        if let Some(context) = &binding.context {
+            self.context = context.clone();
+        }
+
+        Some(binding)
+    }
+
     /// Sets the current context if it exists, returning true on success.
     pub fn set_current_context(&mut self, context: &str) -> bool {
         if self.keymap_registry.contexts.contains_key(context) {
