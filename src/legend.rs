@@ -36,7 +36,7 @@ impl<'a> Legend<'a> {
     pub fn render(&self, frame: &mut UnicodeTerminalFrame) -> std::fmt::Result {
         let rows = self.items.len() + 1; // 1 = "─"
         let cols = std::iter::once(self.title.len() + 4) // 4 = "└ " + " ─"
-            .chain(self.items.iter().map(|x| str_cols(x) + 2)) // 2 = "│ "
+            .chain(self.items.iter().map(|x| str_cols(x) + 1)) // 1 = "│"
             .max()
             .expect("infallible");
         let Some(position) = frame
@@ -51,7 +51,7 @@ impl<'a> Legend<'a> {
 
         let mut subframe = UnicodeTerminalFrame::new(tuinix::TerminalSize::rows_cols(rows, cols));
         for item in &self.items {
-            writeln!(subframe, "│ {item}")?;
+            writeln!(subframe, "│{item}")?;
         }
         writeln!(subframe, "└{}─", horizontal_border(self.title, cols - 2))?;
 
