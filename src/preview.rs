@@ -37,8 +37,8 @@ impl TextPreview {
     /// Creates a new text preview with the given panes.
     pub fn new(left: Option<TextPreviewPane>, right: Option<TextPreviewPane>) -> Self {
         Self {
-            left_pane: left.unwrap_or_else(TextPreviewPane::empty),
-            right_pane: right.unwrap_or_else(TextPreviewPane::empty),
+            left_pane: left.unwrap_or_else(TextPreviewPane::hidden),
+            right_pane: right.unwrap_or_else(TextPreviewPane::hidden),
         }
     }
 
@@ -88,7 +88,7 @@ impl TextPreview {
         let mut frame = UnicodeTerminalFrame::new(region.size);
 
         let cols = region.size.cols;
-        if cols < 2 {
+        if self.left_pane.hidden || cols < 2 {
             return Ok((region.position, frame));
         }
 
@@ -114,7 +114,7 @@ impl TextPreview {
         let mut frame = UnicodeTerminalFrame::new(region.size);
 
         let cols = region.size.cols;
-        if cols < 2 {
+        if self.right_pane.hidden || cols < 2 {
             return Ok((region.position, frame));
         }
 
@@ -142,6 +142,7 @@ pub struct TextPreviewPane {
     max_rows: usize,
     max_cols: usize,
     region: tuinix::TerminalRegion,
+    hide: bool,
 }
 
 impl TextPreviewPane {
@@ -156,16 +157,18 @@ impl TextPreviewPane {
             max_rows,
             max_cols,
             region: tuinix::TerminalRegion::default(),
+            hide: false,
         }
     }
 
-    fn empty() -> Self {
+    fn hidden() -> Self {
         Self {
             title: String::new(),
             text: String::new(),
             max_rows: 0,
             max_cols: 0,
             region: tuinix::TerminalRegion::default(),
+            hide: true,
         }
     }
 
