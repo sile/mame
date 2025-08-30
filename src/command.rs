@@ -275,9 +275,8 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ShellCommand {
 
     fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
         let mut args = vec!["-c".to_owned()];
-        for script in value.to_member("script")?.required()?.to_array()? {
-            args.push(script.try_into()?);
-        }
+        let script_parts: Vec<String> = value.to_member("script")?.required()?.try_into()?;
+        args.push(script_parts.join(" "));
 
         Ok(Self(ExternalCommand {
             command: value
