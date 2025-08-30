@@ -21,14 +21,13 @@ pub struct Legend<'a> {
 
 impl<'a> Legend<'a> {
     /// Creates a new legend with the given title and items.
-    pub fn new<I, T>(title: &'a str, items: I) -> Self
+    pub fn new<I>(title: &'a str, items: I) -> Self
     where
-        I: Iterator<Item = T>,
-        T: std::fmt::Display,
+        I: Iterator<Item = String>,
     {
         Self {
             title,
-            items: items.map(|x| x.to_string()).collect(),
+            items: items.collect(),
         }
     }
 
