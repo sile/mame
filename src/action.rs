@@ -125,3 +125,26 @@ impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Acti
         Ok(config)
     }
 }
+
+/// TODO: doc
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct ContextName(String);
+
+impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ContextName {
+    type Error = nojson::JsonParseError;
+
+    fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
+        let name: String = value.try_into()?;
+
+        let keybindings = value.root().to_member("keybindings")?.required()?;
+        if keybindings
+            .to_object()?
+            .find(|(k, _)| k.to_unquoted_string_str().is_ok_and(|k| k == name))
+            .is_none()
+        {
+            return Err(value.invalid("undefined context"));
+        }
+
+        Ok(Self(name))
+    }
+}
