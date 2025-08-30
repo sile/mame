@@ -7,7 +7,7 @@
 use std::fmt::Write;
 
 use crate::fmt::horizontal_border;
-use crate::terminal::{UnicodeTerminalFrame, str_cols};
+use crate::terminal::UnicodeTerminalFrame;
 
 /// A bordered legend box that displays a list of items with a title.
 ///
@@ -34,9 +34,10 @@ impl<'a> Legend<'a> {
 
     /// Renders the legend to the right edge of the frame if it fits.
     pub fn render(&self, frame: &mut UnicodeTerminalFrame) -> std::fmt::Result {
+        let max_cols = frame.size().cols;
         let rows = self.items.len() + 1; // 1 = "─"
         let cols = std::iter::once(self.title.len() + 4) // 4 = "└ " + " ─"
-            .chain(self.items.iter().map(|x| str_cols(x) + 1)) // 1 = "│"
+            .chain(self.items.iter().map(|x| calculate_cols(x, max_cols) + 1)) // 1 = "│"
             .max()
             .expect("infallible");
         let Some(position) = frame
@@ -59,4 +60,10 @@ impl<'a> Legend<'a> {
 
         Ok(())
     }
+}
+
+fn calculate_cols(s: &str, max_cols: usize) -> usize {
+    let mut frame = UnicodeTerminalFrame::new(tuinix::TerminalSize::rows_cols(1, max_cols));
+    let _ = frame.write_str(s);
+    frame.cursor().col
 }
