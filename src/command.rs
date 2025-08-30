@@ -64,14 +64,21 @@ impl ExternalCommand {
             let name = self.command.display();
             io_error(e, &format!("failed to wait for command '{name}'"))
         })?;
-        self.stdout.handle_output(&output.stdout).map_err(|e| {
-            let name = self.command.display();
-            io_error(e, &format!("failed to handle stdout from command '{name}'"))
-        })?;
-        self.stderr.handle_output(&output.stderr).map_err(|e| {
-            let name = self.command.display();
-            io_error(e, &format!("failed to handle stderr from command '{name}'"))
-        })?;
+
+        let success = output.status.success();
+
+        self.stdout
+            .handle_output(&output.stdout, success)
+            .map_err(|e| {
+                let name = self.command.display();
+                io_error(e, &format!("failed to handle stdout from command '{name}'"))
+            })?;
+        self.stderr
+            .handle_output(&output.stderr, success)
+            .map_err(|e| {
+                let name = self.command.display();
+                io_error(e, &format!("failed to handle stderr from command '{name}'"))
+            })?;
 
         Ok(output)
     }
@@ -189,19 +196,27 @@ pub enum CommandOutput {
 
         /// Skip writing if the output is empty
         skip_if_empty: bool,
+
+        /// Skip writing if the command executed successfully (exit code 0)
+        skip_if_success: bool,
     },
 }
 
 impl CommandOutput {
-    fn handle_output(&self, output: &[u8]) -> std::io::Result<()> {
+    fn handle_output(&self, output: &[u8], success: bool) -> std::io::Result<()> {
         match self {
             Self::Null => Ok(()),
             Self::File {
                 path,
                 append,
                 skip_if_empty,
+                skip_if_success,
             } => {
                 if *skip_if_empty && output.is_empty() {
+                    return Ok(());
+                }
+
+                if *skip_if_success && success {
                     return Ok(());
                 }
 
@@ -233,6 +248,10 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for CommandOutput {
                     .unwrap_or_default(),
                 skip_if_empty: value
                     .to_member("skip_if_empty")?
+                    .map(bool::try_from)?
+                    .unwrap_or_default(),
+                skip_if_success: value
+                    .to_member("skip_if_success")?
                     .map(bool::try_from)?
                     .unwrap_or_default(),
             }),
