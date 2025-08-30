@@ -35,7 +35,6 @@ pub struct TextPreview {
 
 impl TextPreview {
     /// Creates a new text preview with the given panes.
-    ///
     pub fn new(left: Option<TextPreviewPane>, right: Option<TextPreviewPane>) -> Self {
         Self {
             left_pane: left.unwrap_or_else(TextPreviewPane::empty),
