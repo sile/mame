@@ -126,9 +126,25 @@ impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Acti
     }
 }
 
-/// TODO: doc
+
+/// A named context identifier for organizing keybindings.
+///
+/// Contexts allow grouping related keybindings together.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ContextName(String);
+
+impl ContextName {
+    /// Creates a new context name from a string.
+    pub fn new(name: &str) -> Self {
+        Self(name.to_owned())
+    }
+
+    /// Returns the context name as a string slice.
+    pub fn get(&self) -> &str {
+        &self.0
+    }
+}
+
 
 impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ContextName {
     type Error = nojson::JsonParseError;
