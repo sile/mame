@@ -95,8 +95,8 @@ impl TextPreview {
         let title = self.left_pane.title();
         writeln!(frame, "─{}┐", horizontal_border(title, cols - 2))?;
 
-        for _ in 0..region.size.rows {
-            write!(frame, "{}│", padding(' ', cols - 1))?;
+        for _ in 1..region.size.rows {
+            writeln!(frame, "{}│", padding(' ', cols - 1))?;
         }
 
         let text_region = region.size.to_region().drop_top(1).drop_right(1);
@@ -121,7 +121,7 @@ impl TextPreview {
         let title = self.right_pane.title();
         write!(frame, "┌{}─", horizontal_border(title, cols - 2))?;
 
-        for _ in 0..region.size.rows {
+        for _ in 1..region.size.rows {
             writeln!(frame, "│")?;
         }
 
