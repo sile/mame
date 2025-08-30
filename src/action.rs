@@ -94,7 +94,7 @@ impl<A: Action> ActionConfig<A> {
 
     /// Returns an iterator over all contexts and their associated keymaps.
     pub fn keymaps(&self) -> impl '_ + Iterator<Item = (&ContextName, &Keymap<A>)> {
-        self.keymap_registry.contexts.iter().map(|(k, v)| (k, v))
+        self.keymap_registry.contexts.iter()
     }
 }
 
@@ -145,10 +145,9 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ContextName {
         let name: String = value.try_into()?;
 
         let keybindings = value.root().to_member("keybindings")?.required()?;
-        if keybindings
+        if !keybindings
             .to_object()?
-            .find(|(k, _)| k.to_unquoted_string_str().is_ok_and(|k| k == name))
-            .is_none()
+            .any(|(k, _)| k.to_unquoted_string_str().is_ok_and(|k| k == name))
         {
             return Err(value.invalid("undefined context"));
         }
