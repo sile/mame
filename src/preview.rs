@@ -88,7 +88,7 @@ impl TextPreview {
         let mut frame = UnicodeTerminalFrame::new(region.size);
 
         let cols = region.size.cols;
-        if self.left_pane.hide || cols < 2 {
+        if self.left_pane.hidden || cols < 2 {
             return Ok((region.position, frame));
         }
 
@@ -114,12 +114,12 @@ impl TextPreview {
         let mut frame = UnicodeTerminalFrame::new(region.size);
 
         let cols = region.size.cols;
-        if self.right_pane.hide || cols < 2 {
+        if self.right_pane.hidden || cols < 2 {
             return Ok((region.position, frame));
         }
 
         let title = self.right_pane.title();
-        write!(frame, "┌{}─", horizontal_border(title, cols - 2))?;
+        writeln!(frame, "┌{}─", horizontal_border(title, cols - 2))?;
 
         for _ in 1..region.size.rows {
             writeln!(frame, "│")?;
@@ -142,7 +142,7 @@ pub struct TextPreviewPane {
     max_rows: usize,
     max_cols: usize,
     region: tuinix::TerminalRegion,
-    hide: bool,
+    hidden: bool,
 }
 
 impl TextPreviewPane {
@@ -157,7 +157,7 @@ impl TextPreviewPane {
             max_rows,
             max_cols,
             region: tuinix::TerminalRegion::default(),
-            hide: false,
+            hidden: false,
         }
     }
 
@@ -168,7 +168,7 @@ impl TextPreviewPane {
             max_rows: 0,
             max_cols: 0,
             region: tuinix::TerminalRegion::default(),
-            hide: true,
+            hidden: true,
         }
     }
 
