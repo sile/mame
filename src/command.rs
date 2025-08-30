@@ -247,11 +247,11 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for CommandOutput {
                     .map(bool::try_from)?
                     .unwrap_or_default(),
                 skip_if_empty: value
-                    .to_member("skip_if_empty")?
+                    .to_member("skip-if-empty")?
                     .map(bool::try_from)?
                     .unwrap_or_default(),
                 skip_if_success: value
-                    .to_member("skip_if_success")?
+                    .to_member("skip-if-success")?
                     .map(bool::try_from)?
                     .unwrap_or_default(),
             }),
