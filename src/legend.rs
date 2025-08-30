@@ -7,7 +7,7 @@
 use std::fmt::Write;
 
 use crate::fmt::horizontal_border;
-use crate::terminal::{UnicodeTerminalFrame, str_cols};
+use crate::terminal::UnicodeTerminalFrame;
 
 /// A bordered legend box that displays a list of items with a title.
 ///
@@ -21,22 +21,22 @@ pub struct Legend<'a> {
 
 impl<'a> Legend<'a> {
     /// Creates a new legend with the given title and items.
-    pub fn new<I, T>(title: &'a str, items: I) -> Self
+    pub fn new<I>(title: &'a str, items: I) -> Self
     where
-        I: Iterator<Item = T>,
-        T: std::fmt::Display,
+        I: Iterator<Item = String>,
     {
         Self {
             title,
-            items: items.map(|x| x.to_string()).collect(),
+            items: items.collect(),
         }
     }
 
     /// Renders the legend to the right edge of the frame if it fits.
     pub fn render(&self, frame: &mut UnicodeTerminalFrame) -> std::fmt::Result {
+        let max_cols = frame.size().cols;
         let rows = self.items.len() + 1; // 1 = "─"
         let cols = std::iter::once(self.title.len() + 4) // 4 = "└ " + " ─"
-            .chain(self.items.iter().map(|x| str_cols(x) + 2)) // 2 = "│ "
+            .chain(self.items.iter().map(|x| calculate_cols(x, max_cols) + 1)) // 1 = "│"
             .max()
             .expect("infallible");
         let Some(position) = frame
@@ -51,7 +51,7 @@ impl<'a> Legend<'a> {
 
         let mut subframe = UnicodeTerminalFrame::new(tuinix::TerminalSize::rows_cols(rows, cols));
         for item in &self.items {
-            writeln!(subframe, "│ {item}")?;
+            writeln!(subframe, "│{item}")?;
         }
         writeln!(subframe, "└{}─", horizontal_border(self.title, cols - 2))?;
 
@@ -59,4 +59,10 @@ impl<'a> Legend<'a> {
 
         Ok(())
     }
+}
+
+fn calculate_cols(s: &str, max_cols: usize) -> usize {
+    let mut frame = UnicodeTerminalFrame::new(tuinix::TerminalSize::rows_cols(1, max_cols));
+    let _ = frame.write_str(s);
+    frame.cursor().col
 }

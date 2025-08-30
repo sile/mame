@@ -113,7 +113,10 @@ impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Keyb
 
     fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
         Ok(Self {
-            keys: value.to_member("keys")?.required()?.try_into()?,
+            keys: value
+                .to_member("keys")?
+                .map(TryFrom::try_from)?
+                .unwrap_or_default(),
             label: value.to_member("label")?.map(TryFrom::try_from)?,
             action: value.to_member("action")?.map(TryFrom::try_from)?,
             context: value.to_member("context")?.map(TryFrom::try_from)?,
