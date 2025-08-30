@@ -252,13 +252,13 @@ impl FilePreview {
         let left_pane = spec
             .left_pane
             .as_ref()
-            .map(|pane_spec| Self::load_text_pane(pane_spec))
+            .map(Self::load_text_pane)
             .transpose()?;
 
         let right_pane = spec
             .right_pane
             .as_ref()
-            .map(|pane_spec| Self::load_text_pane(pane_spec))
+            .map(Self::load_text_pane)
             .transpose()?;
 
         Ok(Self(TextPreview::new(left_pane, right_pane)))
