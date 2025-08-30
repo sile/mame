@@ -334,7 +334,11 @@ impl<'a> std::fmt::Display for CommandLine<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.command.display())?;
         for arg in self.args {
-            write!(f, " {arg}")?;
+            if arg.is_empty() || arg.chars().any(|c| c.is_control() || c.is_whitespace()) {
+                write!(f, " {arg:?}")?;
+            } else {
+                write!(f, " {arg}")?;
+            }
         }
         Ok(())
     }
