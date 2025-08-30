@@ -88,7 +88,7 @@ impl TextPreview {
         let mut frame = UnicodeTerminalFrame::new(region.size);
 
         let cols = region.size.cols;
-        if self.left_pane.hidden || cols < 2 {
+        if self.left_pane.hide || cols < 2 {
             return Ok((region.position, frame));
         }
 
@@ -114,7 +114,7 @@ impl TextPreview {
         let mut frame = UnicodeTerminalFrame::new(region.size);
 
         let cols = region.size.cols;
-        if self.right_pane.hidden || cols < 2 {
+        if self.right_pane.hide || cols < 2 {
             return Ok((region.position, frame));
         }
 
