@@ -334,17 +334,7 @@ impl<'a> std::fmt::Display for CommandLine<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.command.display())?;
         for arg in self.args {
-            if arg.is_empty() {
-                write!(f, " ''")?;
-            } else if arg
-                .chars()
-                .all(|c| c.is_alphanumeric() || "-_./=".contains(c))
-            {
-                write!(f, " {arg}")?;
-            } else {
-                // Shell escaping: replace single quotes with '"'"' to safely quote arguments
-                write!(f, " '{}'", arg.replace('\'', r#"'"'"'"#))?;
-            }
+            write!(f, " {arg}")?;
         }
         Ok(())
     }
