@@ -1,6 +1,6 @@
 //! External command execution with configurable I/O handling.
 //!
-//! This module provides utilities for executing external commands and shell scripts
+//! This module provides utilities for executing external commands
 //! with fine-grained control over stdin, stdout, and stderr. Commands can be configured
 //! to read input from text or files, and write output to files with various options.
 use std::collections::BTreeMap;
@@ -266,71 +266,6 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for CommandOutput {
             }),
             _ => Err(ty.invalid("unknown stdin type")),
         }
-    }
-}
-
-/// Wrapper for executing shell commands and scripts with configurable I/O handling.
-///
-/// `ShellCommand` is a specialized version of `ExternalCommand` that automatically
-/// configures the shell (using the `SHELL` environment variable or defaulting to "sh")
-/// and formats script arguments with the `-c` flag for shell execution.
-#[derive(Debug, Clone)]
-pub struct ShellCommand(ExternalCommand);
-
-impl ShellCommand {
-    /// Executes the shell command with configured I/O handling.
-    ///
-    /// Delegates to the underlying `ExternalCommand::execute()` method to spawn
-    /// the shell process, handle stdin/stdout/stderr according to configuration,
-    /// and return the complete process output.
-    pub fn execute(&self) -> std::io::Result<std::process::Output> {
-        self.0.execute()
-    }
-
-    /// Returns a reference to the underlying `ExternalCommand` configuration.
-    pub fn get(&self) -> &ExternalCommand {
-        &self.0
-    }
-
-    /// Returns a mutable reference to the underlying `ExternalCommand` configuration.
-    pub fn get_mut(&mut self) -> &mut ExternalCommand {
-        &mut self.0
-    }
-}
-
-impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ShellCommand {
-    type Error = nojson::JsonParseError;
-
-    fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
-        let mut args = vec!["-c".to_owned()];
-        let script_parts: Vec<String> = value.to_member("script")?.required()?.try_into()?;
-        args.push(script_parts.join(""));
-
-        Ok(Self(ExternalCommand {
-            command: value
-                .to_member("shell")?
-                .map(PathBuf::try_from)?
-                .unwrap_or_else(|| {
-                    PathBuf::from(std::env::var("SHELL").unwrap_or_else(|_| "sh".to_owned()))
-                }),
-            args,
-            envs: value
-                .to_member("envs")?
-                .map(BTreeMap::try_from)?
-                .unwrap_or_default(),
-            stdin: value
-                .to_member("stdin")?
-                .map(TryFrom::try_from)?
-                .unwrap_or_default(),
-            stdout: value
-                .to_member("stdout")?
-                .map(TryFrom::try_from)?
-                .unwrap_or_default(),
-            stderr: value
-                .to_member("stderr")?
-                .map(TryFrom::try_from)?
-                .unwrap_or_default(),
-        }))
     }
 }
 
