@@ -8,6 +8,7 @@ use std::io::Write;
 use std::path::PathBuf;
 
 use crate::io_error;
+use crate::json;
 
 /// Configuration for executing an external command with customizable I/O handling.
 #[derive(Debug, Clone)]
@@ -97,14 +98,22 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ExternalCommand
 
     fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
         Ok(Self {
-            command: value.to_member("command")?.required()?.try_into()?,
+            command: json::parse_from_flattened_string(value.to_member("command")?.required()?)?,
             args: value
                 .to_member("args")?
-                .map(Vec::try_from)?
+                .map(|v| {
+                    v.to_array()?
+                        .map(json::parse_from_flattened_string)
+                        .collect()
+                })?
                 .unwrap_or_default(),
             envs: value
                 .to_member("envs")?
-                .map(BTreeMap::try_from)?
+                .map(|v| {
+                    v.to_object()?
+                        .map(|(k, v)| Ok((k.try_into()?, json::parse_from_flattened_string(v)?)))
+                        .collect()
+                })?
                 .unwrap_or_default(),
             stdin: value
                 .to_member("stdin")?
@@ -169,10 +178,10 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for CommandInput {
         match ty.to_unquoted_string_str()?.as_ref() {
             "null" => Ok(Self::Null),
             "text" => Ok(Self::Text {
-                text: value.to_member("text")?.required()?.try_into()?,
+                text: json::parse_from_flattened_string(value.to_member("text")?.required()?)?,
             }),
             "file" => Ok(Self::File {
-                path: value.to_member("path")?.required()?.try_into()?,
+                path: json::parse_from_flattened_string(value.to_member("path")?.required()?)?,
             }),
             _ => Err(ty.invalid("unknown stdin type")),
         }
@@ -241,7 +250,7 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for CommandOutput {
         match ty.to_unquoted_string_str()?.as_ref() {
             "null" => Ok(Self::Null),
             "file" => Ok(Self::File {
-                path: value.to_member("path")?.required()?.try_into()?,
+                path: json::parse_from_flattened_string(value.to_member("path")?.required()?)?,
                 append: value
                     .to_member("append")?
                     .map(bool::try_from)?

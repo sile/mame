@@ -1,7 +1,109 @@
 //! JSON/JSONC utilities.
+use std::borrow::Cow;
 use std::collections::{BTreeMap, HashMap};
 use std::fmt::Write;
 use std::path::{Path, PathBuf};
+
+/// Flattens a JSON value into a single string.
+///
+/// If the input is a string, returns it as-is. If the input is an array,
+/// concatenates all string elements in the array into a single string.
+/// Returns an error for any other JSON value types.
+///
+/// # Examples
+///
+/// ```
+/// # fn main() -> Result<(), nojson::JsonParseError> {
+/// // Single string value
+/// let json = nojson::RawJson::parse(r#""hello world""#)?;
+/// let result = mame::json::flatten_string(json.value())?;
+/// assert_eq!(result, "hello world");
+///
+/// // Array of strings
+/// let json = nojson::RawJson::parse(r#"["hello", " ", "world"]"#)?;
+/// let result = mame::json::flatten_string(json.value())?;
+/// assert_eq!(result, "hello world");
+///
+/// // Empty array
+/// let json = nojson::RawJson::parse("[]")?;
+/// let result = mame::json::flatten_string(json.value())?;
+/// assert_eq!(result, "");
+///
+/// // Nested arrays are flattened recursively
+/// let json = nojson::RawJson::parse(r#"[["hello"], [" ", "world"]]"#)?;
+/// let result = mame::json::flatten_string(json.value())?;
+/// assert_eq!(result, "hello world");
+/// # Ok(())
+/// # }
+/// ```
+pub fn flatten_string<'text, 'raw>(
+    value: nojson::RawJsonValue<'text, 'raw>,
+) -> Result<Cow<'text, str>, nojson::JsonParseError> {
+    if let Ok(s) = value.to_unquoted_string_str() {
+        Ok(s)
+    } else if let Ok(array) = value.to_array() {
+        let mut buf = String::new();
+        for value in array {
+            flatten_string_to_buf(value, &mut buf)?;
+        }
+        Ok(Cow::Owned(buf))
+    } else {
+        Err(value.invalid("expected string or array of strings"))
+    }
+}
+
+/// Parses a JSON value into a type by first flattening it to a string.
+///
+/// This function combines string flattening with parsing. It first flattens
+/// the JSON value into a single string (handling both single strings and
+/// arrays of strings), then parses that string into the target type.
+///
+/// This function uses [`flatten_string()`] internally to convert the JSON value
+/// to a string before parsing.
+///
+/// # Examples
+///
+/// ```
+/// # fn main() -> Result<(), nojson::JsonParseError> {
+/// // Parse a simple string to integer
+/// let json = nojson::RawJson::parse(r#""42""#)?;
+/// let result: i32 = mame::json::parse_from_flattened_string(json.value())?;
+/// assert_eq!(result, 42);
+///
+/// // Parse an array of strings to integer
+/// let json = nojson::RawJson::parse(r#"["4", "2"]"#)?;
+/// let result: i32 = mame::json::parse_from_flattened_string(json.value())?;
+/// assert_eq!(result, 42);
+/// # Ok(())
+/// # }
+/// ```
+pub fn parse_from_flattened_string<T>(
+    value: nojson::RawJsonValue<'_, '_>,
+) -> Result<T, nojson::JsonParseError>
+where
+    T: std::str::FromStr,
+    T::Err: Into<Box<dyn Send + Sync + std::error::Error>>,
+{
+    let s = flatten_string(value)?;
+    s.parse().map_err(|e| value.invalid(e))
+}
+
+fn flatten_string_to_buf<'text, 'raw>(
+    value: nojson::RawJsonValue<'text, 'raw>,
+    buf: &mut String,
+) -> Result<(), nojson::JsonParseError> {
+    if let Ok(s) = value.to_unquoted_string_str() {
+        buf.push_str(&s);
+        Ok(())
+    } else if let Ok(array) = value.to_array() {
+        for value in array {
+            flatten_string_to_buf(value, buf)?;
+        }
+        Ok(())
+    } else {
+        Err(value.invalid("expected string or array of strings"))
+    }
+}
 
 pub(crate) fn load_jsonc_file<P: AsRef<Path>, F, T>(path: P, f: F) -> Result<T, LoadJsonError>
 where
