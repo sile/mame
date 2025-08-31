@@ -103,19 +103,10 @@ impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Acti
 
     fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
         let setup = value.to_member("setup")?.required()?;
-        let context_value = setup.to_member("context")?.required()?;
-        let context = context_value.try_into()?;
-
-        let keybindings = value.to_member("keybindings")?.required()?;
-        let keymap_registry: KeymapRegistry<A> = keybindings.try_into()?;
-        if !keymap_registry.contexts.contains_key(&context) {
-            return Err(context_value.invalid("undefined keybindings context"));
-        }
-
         Ok(Self {
-            context,
+            context: setup.to_member("context")?.required()?.try_into()?,
             setup_action: setup.to_member("action")?.map(A::try_from)?,
-            keymap_registry,
+            keymap_registry: value.to_member("keybindings")?.required()?.try_into()?,
         })
     }
 }
