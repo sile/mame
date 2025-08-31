@@ -48,7 +48,7 @@ pub fn flatten_string<'text, 'raw>(
         }
         Ok(Cow::Owned(buf))
     } else {
-        Err(value.invalid("TODO"))
+        Err(value.invalid("expected string or array of strings"))
     }
 }
 
@@ -101,7 +101,7 @@ fn flatten_string_to_buf<'text, 'raw>(
         }
         Ok(())
     } else {
-        Err(value.invalid("TODO"))
+        Err(value.invalid("expected string or array of strings"))
     }
 }
 
