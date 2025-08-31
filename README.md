@@ -30,7 +30,6 @@ this library provides flexible, composable components that can be combined to cr
 
 ### Command Execution
 - **External Commands**: Execute system commands with configurable stdin/stdout/stderr handling
-- **Shell Integration**: Built-in shell command support with script execution
 
 ### Configuration
 - **JSONC Support**: JSON with comments for human-friendly configuration files
