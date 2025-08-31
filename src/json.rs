@@ -52,6 +52,39 @@ pub fn flatten_string<'text, 'raw>(
     }
 }
 
+/// Parses a JSON value into a type by first flattening it to a string.
+///
+/// This function combines string flattening with parsing. It first flattens
+/// the JSON value into a single string (handling both single strings and
+/// arrays of strings), then parses that string into the target type.
+///
+/// # Examples
+///
+/// ```
+/// # fn main() -> Result<(), nojson::JsonParseError> {
+/// // Parse a simple string to integer
+/// let json = nojson::RawJson::parse(r#""42""#)?;
+/// let result: i32 = mame::json::parse_from_flattened_string(json.value())?;
+/// assert_eq!(result, 42);
+///
+/// // Parse an array of strings to integer
+/// let json = nojson::RawJson::parse(r#"["4", "2"]"#)?;
+/// let result: i32 = mame::json::parse_from_flattened_string(json.value())?;
+/// assert_eq!(result, 42);
+/// # Ok(())
+/// # }
+/// ```
+pub fn parse_from_flattened_string<T>(
+    value: nojson::RawJsonValue<'_, '_>,
+) -> Result<T, nojson::JsonParseError>
+where
+    T: std::str::FromStr,
+    T::Err: Into<Box<dyn Send + Sync + std::error::Error>>,
+{
+    let s = flatten_string(value)?;
+    s.parse().map_err(|e| value.invalid(e))
+}
+
 fn flatten_string_to_buf<'text, 'raw>(
     value: nojson::RawJsonValue<'text, 'raw>,
     buf: &mut String,
