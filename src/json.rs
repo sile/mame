@@ -1,7 +1,73 @@
 //! JSON/JSONC utilities.
+use std::borrow::Cow;
 use std::collections::{BTreeMap, HashMap};
 use std::fmt::Write;
 use std::path::{Path, PathBuf};
+
+/// Flattens a JSON value into a single string.
+///
+/// If the input is a string, returns it as-is. If the input is an array,
+/// concatenates all string elements in the array into a single string.
+/// Returns an error for any other JSON value types.
+///
+/// # Examples
+///
+/// ```
+/// # fn main() -> Result<(), nojson::JsonParseError> {
+/// // Single string value
+/// let json = nojson::RawJson::parse(r#""hello world""#)?;
+/// let result = mame::json::flatten_string(json.value())?;
+/// assert_eq!(result, "hello world");
+///
+/// // Array of strings
+/// let json = nojson::RawJson::parse(r#"["hello", " ", "world"]"#)?;
+/// let result = mame::json::flatten_string(json.value())?;
+/// assert_eq!(result, "hello world");
+///
+/// // Empty array
+/// let json = nojson::RawJson::parse("[]")?;
+/// let result = mame::json::flatten_string(json.value())?;
+/// assert_eq!(result, "");
+///
+/// // Nested arrays are flattened recursively
+/// let json = nojson::RawJson::parse(r#"[["hello"], [" ", "world"]]"#)?;
+/// let result = mame::json::flatten_string(json.value())?;
+/// assert_eq!(result, "hello world");
+/// # Ok(())
+/// # }
+/// ```
+pub fn flatten_string<'text, 'raw>(
+    value: nojson::RawJsonValue<'text, 'raw>,
+) -> Result<Cow<'text, str>, nojson::JsonParseError> {
+    if let Ok(s) = value.to_unquoted_string_str() {
+        Ok(s)
+    } else if let Ok(array) = value.to_array() {
+        let mut buf = String::new();
+        for value in array {
+            flatten_string_to_buf(value, &mut buf)?;
+        }
+        Ok(Cow::Owned(buf))
+    } else {
+        Err(value.invalid("TODO"))
+    }
+}
+
+fn flatten_string_to_buf<'text, 'raw>(
+    value: nojson::RawJsonValue<'text, 'raw>,
+    buf: &mut String,
+) -> Result<(), nojson::JsonParseError> {
+    if let Ok(s) = value.to_unquoted_string_str() {
+        buf.push_str(&s);
+        Ok(())
+    } else if let Ok(array) = value.to_array() {
+        for value in array {
+            flatten_string_to_buf(value, buf)?;
+        }
+        Ok(())
+    } else {
+        Err(value.invalid("TODO"))
+    }
+}
 
 pub(crate) fn load_jsonc_file<P: AsRef<Path>, F, T>(path: P, f: F) -> Result<T, LoadJsonError>
 where
