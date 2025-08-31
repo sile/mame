@@ -1,26 +1,11 @@
 use std::collections::BTreeMap;
 
-use crate::action::{Action, ActionConfig};
+use crate::action::{Action, ContextName};
 use crate::keymatcher::KeyMatcher;
 
 #[derive(Debug, Clone)]
 pub struct KeymapRegistry<A> {
-    pub contexts: BTreeMap<String, Keymap<A>>,
-}
-
-impl<A: Action> KeymapRegistry<A> {
-    pub fn validate(
-        &self,
-        value: nojson::RawJsonValue<'_, '_>,
-        config: &ActionConfig<A>,
-    ) -> Result<(), nojson::JsonParseError> {
-        for (k, v) in value.to_object()? {
-            let context = k.to_unquoted_string_str()?;
-            let keymap = self.contexts.get(context.as_ref()).expect("bug");
-            keymap.validate(v, config)?;
-        }
-        Ok(())
-    }
+    pub contexts: BTreeMap<ContextName, Keymap<A>>,
 }
 
 impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for KeymapRegistry<A> {
@@ -28,7 +13,10 @@ impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Keym
 
     fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
         Ok(Self {
-            contexts: value.try_into()?,
+            contexts: value
+                .to_object()?
+                .map(|(k, v)| Ok((k.try_into()?, v.try_into()?)))
+                .collect::<Result<_, _>>()?,
         })
     }
 }
@@ -50,17 +38,6 @@ impl<A: Action> Keymap<A> {
     /// Returns an iterator over all keybindings in this keymap.
     pub fn bindings(&self) -> impl '_ + Iterator<Item = &Keybinding<A>> {
         self.bindings.iter()
-    }
-
-    fn validate(
-        &self,
-        value: nojson::RawJsonValue<'_, '_>,
-        config: &ActionConfig<A>,
-    ) -> Result<(), nojson::JsonParseError> {
-        for (v, binding) in value.to_array().expect("bug").zip(&self.bindings) {
-            binding.validate(v, config)?;
-        }
-        Ok(())
     }
 }
 
@@ -87,25 +64,7 @@ pub struct Keybinding<A> {
     pub action: Option<A>,
 
     /// Optional context to switch to when this binding is activated
-    pub context: Option<String>,
-}
-
-impl<A: Action> Keybinding<A> {
-    fn validate(
-        &self,
-        value: nojson::RawJsonValue<'_, '_>,
-        config: &ActionConfig<A>,
-    ) -> Result<(), nojson::JsonParseError> {
-        if let Some(context) = &self.context
-            && config.get_keymap(context).is_none()
-        {
-            return Err(value
-                .to_member("context")?
-                .required()?
-                .invalid("undefined context"));
-        }
-        Ok(())
-    }
+    pub context: Option<ContextName>,
 }
 
 impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Keybinding<A> {

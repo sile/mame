@@ -19,9 +19,9 @@ dependencies = [
 
 [[package]]
 name = "nojson"
-version = "0.3.4"
+version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "611eb3424ca13c91e1972a145aca47e07e71fcf0a0953168e8e364b33d0ab04e"
+checksum = "a847c0a03d7915f0e8c1e4ecf3ab97f8523fd703eadb79582bfb464bb224bab2"
 
 [[package]]
 name = "tuinix"

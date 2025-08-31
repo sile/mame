@@ -23,7 +23,7 @@ pub trait Action:
 /// and the ability to switch between different input contexts at runtime.
 #[derive(Debug)]
 pub struct ActionConfig<A> {
-    context: String,
+    context: ContextName,
     setup_action: Option<A>,
     keymap_registry: KeymapRegistry<A>,
 }
@@ -68,9 +68,9 @@ impl<A: Action> ActionConfig<A> {
     }
 
     /// Sets the current context if it exists, returning true on success.
-    pub fn set_current_context(&mut self, context: &str) -> bool {
+    pub fn set_current_context(&mut self, context: &ContextName) -> bool {
         if self.keymap_registry.contexts.contains_key(context) {
-            self.context = context.to_owned();
+            self.context = context.clone();
             true
         } else {
             false
@@ -78,7 +78,7 @@ impl<A: Action> ActionConfig<A> {
     }
 
     /// Returns the name of the currently active context.
-    pub fn current_context(&self) -> &str {
+    pub fn current_context(&self) -> &ContextName {
         &self.context
     }
 
@@ -88,16 +88,13 @@ impl<A: Action> ActionConfig<A> {
     }
 
     /// Returns the keymap for the specified context, if it exists.
-    pub fn get_keymap(&self, context: &str) -> Option<&Keymap<A>> {
+    pub fn get_keymap(&self, context: &ContextName) -> Option<&Keymap<A>> {
         self.keymap_registry.contexts.get(context)
     }
 
     /// Returns an iterator over all contexts and their associated keymaps.
-    pub fn keymaps(&self) -> impl '_ + Iterator<Item = (&str, &Keymap<A>)> {
-        self.keymap_registry
-            .contexts
-            .iter()
-            .map(|(k, v)| (k.as_str(), v))
+    pub fn keymaps(&self) -> impl '_ + Iterator<Item = (&ContextName, &Keymap<A>)> {
+        self.keymap_registry.contexts.iter()
     }
 }
 
@@ -106,22 +103,46 @@ impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Acti
 
     fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
         let setup = value.to_member("setup")?.required()?;
-        let context_value = setup.to_member("context")?.required()?;
-        let context = context_value.try_into()?;
+        Ok(Self {
+            context: setup.to_member("context")?.required()?.try_into()?,
+            setup_action: setup.to_member("action")?.map(A::try_from)?,
+            keymap_registry: value.to_member("keybindings")?.required()?.try_into()?,
+        })
+    }
+}
 
-        let keybindings = value.to_member("keybindings")?.required()?;
-        let keymap_registry: KeymapRegistry<A> = keybindings.try_into()?;
-        if !keymap_registry.contexts.contains_key(&context) {
-            return Err(context_value.invalid("undefined keybindings context"));
+/// A named context identifier for organizing keybindings.
+///
+/// Contexts allow grouping related keybindings together.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct ContextName(String);
+
+impl ContextName {
+    /// Creates a new context name from a string.
+    pub fn new(name: &str) -> Self {
+        Self(name.to_owned())
+    }
+
+    /// Returns the context name as a string slice.
+    pub fn get(&self) -> &str {
+        &self.0
+    }
+}
+
+impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ContextName {
+    type Error = nojson::JsonParseError;
+
+    fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
+        let name: String = value.try_into()?;
+
+        let keybindings = value.root().to_member("keybindings")?.required()?;
+        if !keybindings
+            .to_object()?
+            .any(|(k, _)| k.to_unquoted_string_str().is_ok_and(|k| k == name))
+        {
+            return Err(value.invalid("undefined context"));
         }
 
-        let config = Self {
-            context,
-            setup_action: setup.to_member("action")?.map(A::try_from)?,
-            keymap_registry,
-        };
-        config.keymap_registry.validate(keybindings, &config)?;
-
-        Ok(config)
+        Ok(Self(name))
     }
 }
