@@ -58,6 +58,9 @@ pub fn flatten_string<'text, 'raw>(
 /// the JSON value into a single string (handling both single strings and
 /// arrays of strings), then parses that string into the target type.
 ///
+/// This function uses [`flatten_string()`] internally to convert the JSON value
+/// to a string before parsing.
+///
 /// # Examples
 ///
 /// ```
