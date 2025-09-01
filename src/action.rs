@@ -26,6 +26,7 @@ pub struct ActionConfig<A> {
     context: ContextName,
     setup_action: Option<A>,
     keymap_registry: KeymapRegistry<A>,
+    last_input: Option<tuinix::TerminalInput>,
 }
 
 impl<A: Action> ActionConfig<A> {
@@ -51,6 +52,8 @@ impl<A: Action> ActionConfig<A> {
     /// specifies a context change, the active context will be switched before returning the
     /// binding.
     pub fn handle_input(&mut self, input: tuinix::TerminalInput) -> Option<&Keybinding<A>> {
+        self.last_input = Some(input);
+
         let tuinix::TerminalInput::Key(key) = input else {
             return None;
         };
@@ -107,6 +110,7 @@ impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Acti
             context: setup.to_member("context")?.required()?.try_into()?,
             setup_action: setup.to_member("action")?.map(A::try_from)?,
             keymap_registry: value.to_member("keybindings")?.required()?.try_into()?,
+            last_input: None,
         })
     }
 }
