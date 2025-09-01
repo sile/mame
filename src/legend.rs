@@ -31,7 +31,7 @@ impl<'a> Legend<'a> {
         let border_cols = if title.is_empty() {
             2 // 2 = "└─"
         } else {
-            title.len() + 4 // 4 = "└ " + " ─"
+            calculate_cols(title) + 4 // 4 = "└ " + " ─"
         };
         let cols = std::iter::once(border_cols)
             .chain(items.iter().map(|x| calculate_cols(x) + 1)) // 1 = "│"
