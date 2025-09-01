@@ -54,7 +54,7 @@ impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Keym
 /// A single key binding that maps key combinations to actions within a context.
 #[derive(Debug, Clone)]
 pub struct Keybinding<A> {
-    /// Key combinations that trigger this binding
+    /// Optional key combinations that trigger this binding
     pub keys: Vec<KeyMatcher>,
 
     /// Optional human-readable label for display purposes
