@@ -99,6 +99,14 @@ impl<A: Action> ActionConfig<A> {
     pub fn keymaps(&self) -> impl '_ + Iterator<Item = (&ContextName, &Keymap<A>)> {
         self.keymap_registry.contexts.iter()
     }
+
+    /// Returns the last terminal input that was processed, if any.
+    ///
+    /// This tracks the most recent input passed to `handle_input()`, regardless of whether
+    /// it resulted in a matching keybinding. Returns `None` if no input has been processed yet.
+    pub fn last_input(&self) -> Option<tuinix::TerminalInput> {
+        self.last_input
+    }
 }
 
 impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ActionConfig<A> {
