@@ -77,7 +77,10 @@ pub struct InputBindingId(usize);
 /// A single input binding that maps terminal input patterns to actions within a context.
 #[derive(Debug, Clone)]
 pub struct InputBinding<A> {
-    /// TODO: doc
+    /// A unique identifier for this input binding.
+    ///
+    /// This ID is automatically assigned during JSON parsing and is unique across all bindings
+    /// in all contexts. It can be used for tracking, debugging, or referencing specific bindings.
     pub id: InputBindingId,
 
     /// Input patterns that trigger this binding (keyboard keys, mouse events, etc.)
