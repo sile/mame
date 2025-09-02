@@ -9,9 +9,6 @@ pub enum InputMatcher {
     /// Matches any printable character
     PrintableKey,
 
-    /// Matches any key input
-    AnyKey,
-
     /// Matches a specific mouse event
     Mouse(MouseEvent),
 }
@@ -34,7 +31,6 @@ impl InputMatcher {
                         false
                     }
                 }
-                InputMatcher::AnyKey => true,
                 _ => false,
             },
             tuinix::TerminalInput::Mouse(m) => {
@@ -50,10 +46,6 @@ impl std::str::FromStr for InputMatcher {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if s == "<PRINTABLEKEY>" {
             return Ok(InputMatcher::PrintableKey);
-        }
-
-        if s == "<ANYKEY>" {
-            return Ok(InputMatcher::AnyKey);
         }
 
         // Handle modifier key combinations like "C-c", "M-x"
@@ -159,7 +151,6 @@ impl std::fmt::Display for InputMatcher {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::PrintableKey => write!(f, "<PRINTABLEKEY>"),
-            Self::AnyKey => write!(f, "<ANYKEY>"),
             Self::Key(key) => {
                 if key.alt {
                     write!(f, "M-")?;
