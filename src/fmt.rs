@@ -1,9 +1,18 @@
 //! Formatting utilities for terminal UI display elements.
+use crate::matcher::InputMatcher;
 use crate::terminal::str_cols;
 
 /// Creates a displayable representation of a key input.
 pub fn key(key: tuinix::KeyInput) -> impl std::fmt::Display {
-    crate::keymatcher::KeyMatcher::Literal(key)
+    InputMatcher::Key(key)
+}
+
+/// Creates a displayable representation of a terminal input (key or mouse).
+pub fn input(input: tuinix::TerminalInput) -> impl std::fmt::Display {
+    match input {
+        tuinix::TerminalInput::Key(key) => InputMatcher::Key(key),
+        tuinix::TerminalInput::Mouse(mouse) => InputMatcher::Mouse(mouse.event),
+    }
 }
 
 /// Creates a displayable padding string with the specified character repeated a given number of times.
