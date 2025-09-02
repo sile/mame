@@ -1,6 +1,6 @@
 use tuinix::{KeyCode, KeyInput, MouseEvent};
 
-/// Matches keyboard input against specific patterns.
+/// Matches terminal input (keyboard and mouse) against specific patterns.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum InputMatcher {
     /// Matches an exact key combination
@@ -12,12 +12,12 @@ pub enum InputMatcher {
     /// Matches any key input
     AnyKey,
 
-    /// TODO: doc
+    /// Matches a specific mouse event
     Mouse(MouseEvent),
 }
 
 impl InputMatcher {
-    /// Returns `true` if the given key input matches this matcher pattern.
+    /// Returns `true` if the given terminal input matches this matcher pattern.
     pub fn matches(self, input: tuinix::TerminalInput) -> bool {
         match input {
             tuinix::TerminalInput::Key(key) => match self {
