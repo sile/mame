@@ -147,8 +147,8 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ContextName {
     fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
         let name: String = value.try_into()?;
 
-        let keybindings = value.root().to_member("keybindings")?.required()?;
-        if !keybindings
+        let bindings = value.root().to_member("bindings")?.required()?;
+        if !bindings
             .to_object()?
             .any(|(k, _)| k.to_unquoted_string_str().is_ok_and(|k| k == name))
         {

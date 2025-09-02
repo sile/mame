@@ -1,7 +1,7 @@
 //! Legend rendering utilities for terminal UI components.
 //!
 //! This module provides functionality to create bordered legend boxes that display
-//! lists of items (typically keybindings or help text) in a terminal interface.
+//! lists of items (typically input bindings or help text) in a terminal interface.
 //! The rendered legends use Unicode box-drawing characters and automatically
 //! calculate proper sizing based on content width.
 use std::fmt::Write;
