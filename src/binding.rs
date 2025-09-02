@@ -4,11 +4,11 @@ use crate::action::{Action, ContextName};
 use crate::matcher::KeyMatcher;
 
 #[derive(Debug, Clone)]
-pub struct KeymapRegistry<A> {
-    pub contexts: BTreeMap<ContextName, Keymap<A>>,
+pub struct InputMapRegistry<A> {
+    pub contexts: BTreeMap<ContextName, InputMap<A>>,
 }
 
-impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for KeymapRegistry<A> {
+impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for InputMapRegistry<A> {
     type Error = nojson::JsonParseError;
 
     fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
@@ -23,11 +23,11 @@ impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Keym
 
 /// A collection of key bindings for a specific context.
 #[derive(Debug, Clone)]
-pub struct Keymap<A> {
+pub struct InputMap<A> {
     bindings: Vec<InputBinding<A>>,
 }
 
-impl<A: Action> Keymap<A> {
+impl<A: Action> InputMap<A> {
     /// Finds the first binding that matches the given key input.
     pub fn get_binding(&self, key: tuinix::KeyInput) -> Option<&InputBinding<A>> {
         self.bindings
@@ -41,7 +41,7 @@ impl<A: Action> Keymap<A> {
     }
 }
 
-impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Keymap<A> {
+impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for InputMap<A> {
     type Error = nojson::JsonParseError;
 
     fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
@@ -51,7 +51,7 @@ impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Keym
     }
 }
 
-/// A single key binding that maps key combinations to actions within a context.
+/// TODO: doc
 #[derive(Debug, Clone)]
 pub struct InputBinding<A> {
     /// TODO: doc

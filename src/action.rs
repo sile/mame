@@ -5,10 +5,10 @@
 //! into different contexts, each with their own set of keybindings.
 use std::path::Path;
 
-use crate::binding::KeymapRegistry;
+use crate::binding::InputMapRegistry;
 use crate::json::LoadJsonError;
 
-pub use crate::binding::{InputBinding, Keymap};
+pub use crate::binding::{InputBinding, InputMap};
 pub use crate::matcher::KeyMatcher;
 
 /// Marker trait for types that can be deserialized from JSON as action definitions.
@@ -25,7 +25,7 @@ pub trait Action:
 pub struct ActionConfig<A> {
     context: ContextName,
     setup_action: Option<A>,
-    keymap_registry: KeymapRegistry<A>,
+    input_map_registry: InputMapRegistry<A>,
     last_input: Option<tuinix::TerminalInput>,
 }
 
@@ -59,7 +59,7 @@ impl<A: Action> ActionConfig<A> {
         };
 
         let binding = self
-            .keymap_registry
+            .input_map_registry
             .contexts
             .get(&self.context)?
             .get_binding(key)?;
@@ -72,7 +72,7 @@ impl<A: Action> ActionConfig<A> {
 
     /// Sets the current context if it exists, returning true on success.
     pub fn set_current_context(&mut self, context: &ContextName) -> bool {
-        if self.keymap_registry.contexts.contains_key(context) {
+        if self.input_map_registry.contexts.contains_key(context) {
             self.context = context.clone();
             true
         } else {
@@ -86,18 +86,18 @@ impl<A: Action> ActionConfig<A> {
     }
 
     /// Returns the keymap for the currently active context.
-    pub fn current_keymap(&self) -> &Keymap<A> {
-        &self.keymap_registry.contexts[&self.context]
+    pub fn current_input_map(&self) -> &InputMap<A> {
+        &self.input_map_registry.contexts[&self.context]
     }
 
     /// Returns the keymap for the specified context, if it exists.
-    pub fn get_keymap(&self, context: &ContextName) -> Option<&Keymap<A>> {
-        self.keymap_registry.contexts.get(context)
+    pub fn get_input_map(&self, context: &ContextName) -> Option<&InputMap<A>> {
+        self.input_map_registry.contexts.get(context)
     }
 
     /// Returns an iterator over all contexts and their associated keymaps.
-    pub fn keymaps(&self) -> impl '_ + Iterator<Item = (&ContextName, &Keymap<A>)> {
-        self.keymap_registry.contexts.iter()
+    pub fn input_maps(&self) -> impl '_ + Iterator<Item = (&ContextName, &InputMap<A>)> {
+        self.input_map_registry.contexts.iter()
     }
 
     /// Returns the last terminal input that was processed, if any.
@@ -117,7 +117,7 @@ impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Acti
         Ok(Self {
             context: setup.to_member("context")?.required()?.try_into()?,
             setup_action: setup.to_member("action")?.map(A::try_from)?,
-            keymap_registry: value.to_member("keybindings")?.required()?.try_into()?,
+            input_map_registry: value.to_member("bindings")?.required()?.try_into()?,
             last_input: None,
         })
     }
