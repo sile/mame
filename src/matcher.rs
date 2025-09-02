@@ -44,8 +44,20 @@ impl std::str::FromStr for InputMatcher {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s == "<PRINTABLE>" {
-            return Ok(InputMatcher::Printable);
+        // Handle inputs that do not accept modifiers
+        let mouse = |event| InputMatcher::Mouse(event);
+        match s {
+            "<PRINTABLE>" => return Ok(InputMatcher::Printable),
+            "<LEFTCLICK>" => return Ok(mouse(MouseEvent::LeftPress)),
+            "<LEFTRELEASE>" => return Ok(mouse(MouseEvent::LeftRelease)),
+            "<RIGHTCLICK>" => return Ok(mouse(MouseEvent::RightPress)),
+            "<RIGHTRELEASE>" => return Ok(mouse(MouseEvent::RightRelease)),
+            "<MIDDLECLICK>" => return Ok(mouse(MouseEvent::MiddlePress)),
+            "<MIDDLERELEASE>" => return Ok(mouse(MouseEvent::MiddleRelease)),
+            "<DRAG>" => return Ok(mouse(MouseEvent::Drag)),
+            "<SCROLLUP>" => return Ok(mouse(MouseEvent::ScrollUp)),
+            "<SCROLLDOWN>" => return Ok(mouse(MouseEvent::ScrollDown)),
+            _ => {}
         }
 
         // Handle modifier key combinations like "C-c", "M-x"
@@ -69,17 +81,13 @@ impl std::str::FromStr for InputMatcher {
             }
         }
 
-        // Handle special keys and mouse events in angle brackets
+        // Handle special keys
         let key = |code| InputMatcher::Key(KeyInput { ctrl, alt, code });
-        let mouse = |event| InputMatcher::Mouse(event);
         match remaining {
-            // Arrow keys - clear and standard
             "<UP>" => return Ok(key(KeyCode::Up)),
             "<DOWN>" => return Ok(key(KeyCode::Down)),
             "<LEFT>" => return Ok(key(KeyCode::Left)),
             "<RIGHT>" => return Ok(key(KeyCode::Right)),
-
-            // Common keys
             "<ENTER>" => return Ok(key(KeyCode::Enter)),
             "<ESCAPE>" => return Ok(key(KeyCode::Escape)),
             "<BACKSPACE>" => return Ok(key(KeyCode::Backspace)),
@@ -87,26 +95,10 @@ impl std::str::FromStr for InputMatcher {
             "<BACKTAB>" => return Ok(key(KeyCode::BackTab)),
             "<DELETE>" => return Ok(key(KeyCode::Delete)),
             "<INSERT>" => return Ok(key(KeyCode::Insert)),
-
-            // Navigation keys - consistent naming without underscores
             "<HOME>" => return Ok(key(KeyCode::Home)),
             "<END>" => return Ok(key(KeyCode::End)),
             "<PAGEUP>" => return Ok(key(KeyCode::PageUp)),
             "<PAGEDOWN>" => return Ok(key(KeyCode::PageDown)),
-
-            // Mouse events - shorter, more consistent naming
-            "<LEFTCLICK>" => return Ok(mouse(MouseEvent::LeftPress)),
-            "<LEFTRELEASE>" => return Ok(mouse(MouseEvent::LeftRelease)),
-            "<RIGHTCLICK>" => return Ok(mouse(MouseEvent::RightPress)),
-            "<RIGHTRELEASE>" => return Ok(mouse(MouseEvent::RightRelease)),
-            "<MIDDLECLICK>" => return Ok(mouse(MouseEvent::MiddlePress)),
-            "<MIDDLERELEASE>" => return Ok(mouse(MouseEvent::MiddleRelease)),
-            "<DRAG>" => return Ok(mouse(MouseEvent::Drag)),
-
-            // Scroll events - match the enum naming
-            "<SCROLLUP>" => return Ok(mouse(MouseEvent::ScrollUp)),
-            "<SCROLLDOWN>" => return Ok(mouse(MouseEvent::ScrollDown)),
-
             _ => {}
         }
 
