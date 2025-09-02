@@ -8,7 +8,7 @@ use std::path::Path;
 use crate::binding::KeymapRegistry;
 use crate::json::LoadJsonError;
 
-pub use crate::binding::{Keybinding, Keymap};
+pub use crate::binding::{InputBinding, Keymap};
 pub use crate::matcher::KeyMatcher;
 
 /// Marker trait for types that can be deserialized from JSON as action definitions.
@@ -51,7 +51,7 @@ impl<A: Action> ActionConfig<A> {
     /// against the current context's keybindings. If a matching keybinding is found and it
     /// specifies a context change, the active context will be switched before returning the
     /// binding.
-    pub fn handle_input(&mut self, input: tuinix::TerminalInput) -> Option<&Keybinding<A>> {
+    pub fn handle_input(&mut self, input: tuinix::TerminalInput) -> Option<&InputBinding<A>> {
         self.last_input = Some(input);
 
         let tuinix::TerminalInput::Key(key) = input else {
