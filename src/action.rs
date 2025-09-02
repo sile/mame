@@ -9,7 +9,7 @@ use std::path::Path;
 use crate::binding::InputMapRegistry;
 use crate::json::LoadJsonError;
 
-pub use crate::binding::{InputBinding, InputMap};
+pub use crate::binding::{InputBinding, InputBindingId, InputMap};
 pub use crate::matcher::InputMatcher;
 
 /// Marker trait for types that can be deserialized from JSON as action definitions.
