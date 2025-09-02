@@ -9,7 +9,7 @@ use std::path::Path;
 use crate::binding::InputMapRegistry;
 use crate::json::LoadJsonError;
 
-pub use crate::binding::{InputBinding, InputBindingId, InputMap};
+pub use crate::binding::{InputBinding, InputBindingId};
 pub use crate::matcher::InputMatcher;
 
 /// Marker trait for types that can be deserialized from JSON as action definitions.
@@ -62,7 +62,8 @@ impl<A: Action> ActionConfig<A> {
             .input_map_registry
             .contexts
             .get(&self.context)?
-            .get_binding(input)?;
+            .iter()
+            .find(|b| b.matches(input))?;
         if let Some(context) = &binding.context {
             self.context = context.clone();
         }
@@ -87,18 +88,16 @@ impl<A: Action> ActionConfig<A> {
     }
 
     /// Returns the input map for the currently active context.
-    pub fn current_input_map(&self) -> &InputMap<A> {
+    pub fn current_bindings(&self) -> &[InputBinding<A>] {
         &self.input_map_registry.contexts[&self.context]
     }
 
-    /// Returns the input map for the specified context, if it exists.
-    pub fn get_input_map(&self, context: &ContextName) -> Option<&InputMap<A>> {
-        self.input_map_registry.contexts.get(context)
-    }
-
     /// Returns an iterator over all contexts and their associated input maps.
-    pub fn input_maps(&self) -> impl '_ + Iterator<Item = (&ContextName, &InputMap<A>)> {
-        self.input_map_registry.contexts.iter()
+    pub fn all_bindings(&self) -> impl '_ + Iterator<Item = (&ContextName, &[InputBinding<A>])> {
+        self.input_map_registry
+            .contexts
+            .iter()
+            .map(|(k, v)| (k, &v[..]))
     }
 
     /// Returns the last terminal input that was processed, if any.

@@ -5,7 +5,7 @@ use crate::matcher::InputMatcher;
 
 #[derive(Debug, Clone)]
 pub struct InputMapRegistry<A> {
-    pub contexts: BTreeMap<ContextName, InputMap<A>>,
+    pub contexts: BTreeMap<ContextName, Vec<InputBinding<A>>>,
 }
 
 impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for InputMapRegistry<A> {
@@ -18,50 +18,14 @@ impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Inpu
                 .to_object()?
                 .map(|(k, v)| {
                     let context_name = k.try_into()?;
-                    let mut input_map: InputMap<_> = v.try_into()?;
-                    for b in &mut input_map.bindings {
+                    let mut bindings: Vec<InputBinding<_>> = v.try_into()?;
+                    for b in &mut bindings {
                         b.id.0 = next_binding_id;
                         next_binding_id += 1;
                     }
-                    Ok((context_name, input_map))
+                    Ok((context_name, bindings))
                 })
                 .collect::<Result<_, _>>()?,
-        })
-    }
-}
-
-/// A collection of input bindings for a specific context.
-///
-/// Each input map contains a list of bindings that define how terminal inputs
-/// (keyboard and mouse events) should be handled within that context.
-#[derive(Debug, Clone)]
-pub struct InputMap<A> {
-    bindings: Vec<InputBinding<A>>,
-}
-
-impl<A: Action> InputMap<A> {
-    /// Finds the first binding that matches the given terminal input.
-    ///
-    /// Returns the first binding whose triggers match the provided input,
-    /// or `None` if no matching binding is found.
-    pub fn get_binding(&self, input: tuinix::TerminalInput) -> Option<&InputBinding<A>> {
-        self.bindings
-            .iter()
-            .find(|b| b.triggers.iter().any(|t| t.matches(input)))
-    }
-
-    /// Returns an iterator over all input bindings in this input map.
-    pub fn bindings(&self) -> impl '_ + Iterator<Item = &InputBinding<A>> {
-        self.bindings.iter()
-    }
-}
-
-impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for InputMap<A> {
-    type Error = nojson::JsonParseError;
-
-    fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
-        Ok(Self {
-            bindings: value.try_into()?,
         })
     }
 }
