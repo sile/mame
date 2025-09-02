@@ -67,10 +67,6 @@ impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Inpu
 }
 
 /// A unique identifier for an input binding.
-///
-/// This identifier is automatically assigned when an `InputBinding` is created
-/// from JSON configuration. Each binding across all contexts receives a unique ID
-/// that can be used for tracking, debugging, or referencing specific bindings.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct InputBindingId(usize);
 
