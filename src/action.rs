@@ -29,6 +29,7 @@ pub struct ActionConfig<A> {
     setup_action: Option<A>,
     input_map_registry: InputMapRegistry<A>,
     last_input: Option<tuinix::TerminalInput>,
+    last_binding_id: Option<InputBindingId>,
 }
 
 impl<A: Action> ActionConfig<A> {
@@ -55,6 +56,7 @@ impl<A: Action> ActionConfig<A> {
     /// binding.
     pub fn handle_input(&mut self, input: tuinix::TerminalInput) -> Option<&InputBinding<A>> {
         self.last_input = Some(input);
+        self.last_binding_id = None;
 
         let binding = self
             .input_map_registry
@@ -64,6 +66,7 @@ impl<A: Action> ActionConfig<A> {
         if let Some(context) = &binding.context {
             self.context = context.clone();
         }
+        self.last_binding_id = Some(binding.id);
 
         Some(binding)
     }
@@ -106,6 +109,14 @@ impl<A: Action> ActionConfig<A> {
     pub fn last_input(&self) -> Option<tuinix::TerminalInput> {
         self.last_input
     }
+
+    /// Returns the ID of the last input binding that was successfully matched, if any.
+    ///
+    /// This tracks the unique identifier of the most recent binding returned by `handle_input()`.
+    /// Returns `None` if no input has been processed yet or if the last input didn't match any binding.
+    pub fn last_binding_id(&self) -> Option<InputBindingId> {
+        self.last_binding_id
+    }
 }
 
 impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ActionConfig<A> {
@@ -118,6 +129,7 @@ impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Acti
             setup_action: setup.to_member("action")?.map(A::try_from)?,
             input_map_registry: value.to_member("bindings")?.required()?.try_into()?,
             last_input: None,
+            last_binding_id: None,
         })
     }
 }
