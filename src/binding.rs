@@ -92,6 +92,15 @@ pub struct InputBinding<A> {
     pub context: Option<ContextName>,
 }
 
+impl<A: Action> InputBinding<A> {
+    /// Checks if this binding matches the given terminal input.
+    ///
+    /// Returns `true` if any of the binding's triggers match the provided input.
+    pub fn matches(&self, input: tuinix::TerminalInput) -> bool {
+        self.triggers.iter().any(|t| t.matches(input))
+    }
+}
+
 impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for InputBinding<A> {
     type Error = nojson::JsonParseError;
 
