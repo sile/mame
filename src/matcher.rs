@@ -167,7 +167,7 @@ impl std::fmt::Display for InputMatcher {
                     KeyCode::Escape => write!(f, "<ESCAPE>"),
                     KeyCode::Backspace => write!(f, "<BACKSPACE>"),
                     KeyCode::Tab => write!(f, "<TAB>"),
-                    KeyCode::BackTab => write!(f, "<BACK_TAB>"),
+                    KeyCode::BackTab => write!(f, "<BACKTAB>"),
                     KeyCode::Delete => write!(f, "<DELETE>"),
                     KeyCode::Insert => write!(f, "<INSERT>"),
                     KeyCode::Home => write!(f, "<HOME>"),
