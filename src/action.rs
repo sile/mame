@@ -1,8 +1,9 @@
-//! Configurable action system with context-aware keybindings.
+//! Configurable action system with context-aware input bindings.
 //!
 //! This module provides the core action system that allows defining custom actions
-//! and keybindings through JSON/JSONC configuration files. Actions can be organized
-//! into different contexts, each with their own set of keybindings.
+//! and input bindings through JSON/JSONC configuration files. Actions can be organized
+//! into different contexts, each with their own set of input bindings that support
+//! both keyboard and mouse events.
 use std::path::Path;
 
 use crate::binding::InputMapRegistry;
@@ -17,10 +18,11 @@ pub trait Action:
 {
 }
 
-/// Configuration for a context-aware action system with keybindings.
+/// Configuration for a context-aware action system with input bindings.
 ///
-/// Manages multiple keymaps organized by context, with an optional setup action
-/// and the ability to switch between different input contexts at runtime.
+/// Manages multiple input maps organized by context, with an optional setup action
+/// and the ability to switch between different input contexts at runtime. Supports
+/// both keyboard and mouse input events.
 #[derive(Debug)]
 pub struct ActionConfig<A> {
     context: ContextName,
@@ -45,10 +47,10 @@ impl<A: Action> ActionConfig<A> {
         self.setup_action.as_ref()
     }
 
-    /// Processes terminal input and returns the matching keybinding, if any.
+    /// Processes terminal input and returns the matching input binding, if any.
     ///
-    /// This method takes terminal input (typically keyboard events) and attempts to match it
-    /// against the current context's keybindings. If a matching keybinding is found and it
+    /// This method takes terminal input (keyboard or mouse events) and attempts to match it
+    /// against the current context's input bindings. If a matching binding is found and it
     /// specifies a context change, the active context will be switched before returning the
     /// binding.
     pub fn handle_input(&mut self, input: tuinix::TerminalInput) -> Option<&InputBinding<A>> {
@@ -81,17 +83,17 @@ impl<A: Action> ActionConfig<A> {
         &self.context
     }
 
-    /// Returns the keymap for the currently active context.
+    /// Returns the input map for the currently active context.
     pub fn current_input_map(&self) -> &InputMap<A> {
         &self.input_map_registry.contexts[&self.context]
     }
 
-    /// Returns the keymap for the specified context, if it exists.
+    /// Returns the input map for the specified context, if it exists.
     pub fn get_input_map(&self, context: &ContextName) -> Option<&InputMap<A>> {
         self.input_map_registry.contexts.get(context)
     }
 
-    /// Returns an iterator over all contexts and their associated keymaps.
+    /// Returns an iterator over all contexts and their associated input maps.
     pub fn input_maps(&self) -> impl '_ + Iterator<Item = (&ContextName, &InputMap<A>)> {
         self.input_map_registry.contexts.iter()
     }
@@ -99,7 +101,8 @@ impl<A: Action> ActionConfig<A> {
     /// Returns the last terminal input that was processed, if any.
     ///
     /// This tracks the most recent input passed to `handle_input()`, regardless of whether
-    /// it resulted in a matching keybinding. Returns `None` if no input has been processed yet.
+    /// it resulted in a matching input binding. Returns `None` if no input has been processed yet.
+    /// The input can be either a keyboard event or a mouse event.
     pub fn last_input(&self) -> Option<tuinix::TerminalInput> {
         self.last_input
     }
@@ -119,9 +122,10 @@ impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Acti
     }
 }
 
-/// A named context identifier for organizing keybindings.
+/// A named context identifier for organizing input bindings.
 ///
-/// Contexts allow grouping related keybindings together.
+/// Contexts allow grouping related input bindings together. Each context
+/// can contain bindings for both keyboard and mouse events.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ContextName(String);
 
