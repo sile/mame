@@ -72,23 +72,23 @@ impl std::str::FromStr for InputMatcher {
         }
 
         // Handle special keys in angle brackets
-        let key = |code| KeyInput { ctrl, alt, code };
+        let key = |code| InputMatcher::Key(KeyInput { ctrl, alt, code });
         match remaining {
-            "<UP>" => return Ok(InputMatcher::Key(key(KeyCode::Up))),
-            "<DOWN>" => return Ok(InputMatcher::Key(key(KeyCode::Down))),
-            "<LEFT>" => return Ok(InputMatcher::Key(key(KeyCode::Left))),
-            "<RIGHT>" => return Ok(InputMatcher::Key(key(KeyCode::Right))),
-            "<ENTER>" => return Ok(InputMatcher::Key(key(KeyCode::Enter))),
-            "<ESCAPE>" => return Ok(InputMatcher::Key(key(KeyCode::Escape))),
-            "<BACKSPACE>" => return Ok(InputMatcher::Key(key(KeyCode::Backspace))),
-            "<TAB>" => return Ok(InputMatcher::Key(key(KeyCode::Tab))),
-            "<BACKTAB>" => return Ok(InputMatcher::Key(key(KeyCode::BackTab))),
-            "<DELETE>" => return Ok(InputMatcher::Key(key(KeyCode::Delete))),
-            "<INSERT>" => return Ok(InputMatcher::Key(key(KeyCode::Insert))),
-            "<HOME>" => return Ok(InputMatcher::Key(key(KeyCode::Home))),
-            "<END>" => return Ok(InputMatcher::Key(key(KeyCode::End))),
-            "<PAGEUP>" => return Ok(InputMatcher::Key(key(KeyCode::PageUp))),
-            "<PAGEDOWN>" => return Ok(InputMatcher::Key(key(KeyCode::PageDown))),
+            "<UP>" => return Ok(key(KeyCode::Up)),
+            "<DOWN>" => return Ok(key(KeyCode::Down)),
+            "<LEFT>" => return Ok(key(KeyCode::Left)),
+            "<RIGHT>" => return Ok(key(KeyCode::Right)),
+            "<ENTER>" => return Ok(key(KeyCode::Enter)),
+            "<ESCAPE>" => return Ok(key(KeyCode::Escape)),
+            "<BACKSPACE>" => return Ok(key(KeyCode::Backspace)),
+            "<TAB>" => return Ok(key(KeyCode::Tab)),
+            "<BACKTAB>" => return Ok(key(KeyCode::BackTab)),
+            "<DELETE>" => return Ok(key(KeyCode::Delete)),
+            "<INSERT>" => return Ok(key(KeyCode::Insert)),
+            "<HOME>" => return Ok(key(KeyCode::Home)),
+            "<END>" => return Ok(key(KeyCode::End)),
+            "<PAGEUP>" => return Ok(key(KeyCode::PageUp)),
+            "<PAGEDOWN>" => return Ok(key(KeyCode::PageDown)),
             _ => {}
         }
 
@@ -98,14 +98,14 @@ impl std::str::FromStr for InputMatcher {
             && chars.next().is_none()
         {
             let code = KeyCode::Char(ch);
-            Ok(InputMatcher::Key(key(code)))
+            Ok(key(code))
         } else if let Some(hex_str) = remaining.strip_prefix("0x") {
             // Handle hex notation for control chars such as 0x7f
             match u32::from_str_radix(hex_str, 16) {
                 Ok(code_point) => {
                     if let Some(ch) = char::from_u32(code_point) {
                         let code = KeyCode::Char(ch);
-                        Ok(InputMatcher::Key(key(code)))
+                        Ok(key(code))
                     } else {
                         Err(format!("invalid Unicode code point: 0x{:x}", code_point))
                     }
