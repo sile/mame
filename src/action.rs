@@ -20,7 +20,7 @@ pub trait Action:
 
 /// Configuration for a context-aware action system with input bindings.
 ///
-/// Manages multiple input maps organized by context, with an optional setup action
+/// Manages multiple input bindings organized by context, with an optional setup action
 /// and the ability to switch between different input contexts at runtime. Supports
 /// both keyboard and mouse input events.
 #[derive(Debug)]
@@ -87,12 +87,17 @@ impl<A: Action> ActionConfig<A> {
         &self.context
     }
 
-    /// Returns the input map for the currently active context.
+    /// Returns all input bindings for the currently active context.
+    ///
+    /// The bindings are returned in the order they appear in the configuration,
+    /// which is also the order they are checked during input matching.
     pub fn current_bindings(&self) -> &[InputBinding<A>] {
         &self.input_map_registry.contexts[&self.context]
     }
 
-    /// Returns an iterator over all contexts and their associated input maps.
+    /// Returns an iterator over all contexts and their associated input bindings.
+    ///
+    /// This provides access to all configured contexts, not just the currently active one.
     pub fn all_bindings(&self) -> impl '_ + Iterator<Item = (&ContextName, &[InputBinding<A>])> {
         self.input_map_registry
             .contexts
