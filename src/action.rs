@@ -9,7 +9,7 @@ use crate::binding::InputMapRegistry;
 use crate::json::LoadJsonError;
 
 pub use crate::binding::{InputBinding, InputMap};
-pub use crate::matcher::KeyMatcher;
+pub use crate::matcher::InputMatcher;
 
 /// Marker trait for types that can be deserialized from JSON as action definitions.
 pub trait Action:
@@ -54,15 +54,11 @@ impl<A: Action> ActionConfig<A> {
     pub fn handle_input(&mut self, input: tuinix::TerminalInput) -> Option<&InputBinding<A>> {
         self.last_input = Some(input);
 
-        let tuinix::TerminalInput::Key(key) = input else {
-            return None;
-        };
-
         let binding = self
             .input_map_registry
             .contexts
             .get(&self.context)?
-            .get_binding(key)?;
+            .get_binding(input)?;
         if let Some(context) = &binding.context {
             self.context = context.clone();
         }

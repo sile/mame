@@ -2,49 +2,52 @@ use tuinix::{KeyCode, KeyInput};
 
 /// Matches keyboard input against specific patterns.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum KeyMatcher {
+pub enum InputMatcher {
     /// Matches an exact key combination
-    Literal(KeyInput),
+    Key(KeyInput),
 
     /// Matches any printable character
-    PrintableChar,
+    PrintableKey,
 
     /// Matches any key input
-    Any,
+    AnyKey,
 }
 
-impl KeyMatcher {
+impl InputMatcher {
     /// Returns `true` if the given key input matches this matcher pattern.
-    pub fn matches(self, key: KeyInput) -> bool {
-        match self {
-            KeyMatcher::Literal(k) => k == key,
-            KeyMatcher::PrintableChar => {
-                if let KeyInput {
-                    ctrl: false,
-                    alt: false,
-                    code: KeyCode::Char(ch),
-                } = key
-                {
-                    !ch.is_control()
-                } else {
-                    false
+    pub fn matches(self, input: tuinix::TerminalInput) -> bool {
+        match input {
+            tuinix::TerminalInput::Key(key) => match self {
+                InputMatcher::Key(k) => k == key,
+                InputMatcher::PrintableKey => {
+                    if let KeyInput {
+                        ctrl: false,
+                        alt: false,
+                        code: KeyCode::Char(ch),
+                    } = key
+                    {
+                        !ch.is_control()
+                    } else {
+                        false
+                    }
                 }
-            }
-            KeyMatcher::Any => true,
+                InputMatcher::AnyKey => true,
+            },
+            _ => todo!(),
         }
     }
 }
 
-impl std::str::FromStr for KeyMatcher {
+impl std::str::FromStr for InputMatcher {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s == "<PRINTABLE>" {
-            return Ok(KeyMatcher::PrintableChar);
+        if s == "<PRINTABLE_KEY>" {
+            return Ok(InputMatcher::PrintableKey);
         }
 
-        if s == "<ANY>" {
-            return Ok(KeyMatcher::Any);
+        if s == "<ANY_KEY>" {
+            return Ok(InputMatcher::AnyKey);
         }
 
         // Handle modifier key combinations like "C-c", "M-x"
@@ -71,21 +74,21 @@ impl std::str::FromStr for KeyMatcher {
         // Handle special keys in angle brackets
         let key = |code| KeyInput { ctrl, alt, code };
         match remaining {
-            "<UP>" => return Ok(KeyMatcher::Literal(key(KeyCode::Up))),
-            "<DOWN>" => return Ok(KeyMatcher::Literal(key(KeyCode::Down))),
-            "<LEFT>" => return Ok(KeyMatcher::Literal(key(KeyCode::Left))),
-            "<RIGHT>" => return Ok(KeyMatcher::Literal(key(KeyCode::Right))),
-            "<ENTER>" => return Ok(KeyMatcher::Literal(key(KeyCode::Enter))),
-            "<ESCAPE>" => return Ok(KeyMatcher::Literal(key(KeyCode::Escape))),
-            "<BACKSPACE>" => return Ok(KeyMatcher::Literal(key(KeyCode::Backspace))),
-            "<TAB>" => return Ok(KeyMatcher::Literal(key(KeyCode::Tab))),
-            "<BACKTAB>" => return Ok(KeyMatcher::Literal(key(KeyCode::BackTab))),
-            "<DELETE>" => return Ok(KeyMatcher::Literal(key(KeyCode::Delete))),
-            "<INSERT>" => return Ok(KeyMatcher::Literal(key(KeyCode::Insert))),
-            "<HOME>" => return Ok(KeyMatcher::Literal(key(KeyCode::Home))),
-            "<END>" => return Ok(KeyMatcher::Literal(key(KeyCode::End))),
-            "<PAGEUP>" => return Ok(KeyMatcher::Literal(key(KeyCode::PageUp))),
-            "<PAGEDOWN>" => return Ok(KeyMatcher::Literal(key(KeyCode::PageDown))),
+            "<UP>" => return Ok(InputMatcher::Key(key(KeyCode::Up))),
+            "<DOWN>" => return Ok(InputMatcher::Key(key(KeyCode::Down))),
+            "<LEFT>" => return Ok(InputMatcher::Key(key(KeyCode::Left))),
+            "<RIGHT>" => return Ok(InputMatcher::Key(key(KeyCode::Right))),
+            "<ENTER>" => return Ok(InputMatcher::Key(key(KeyCode::Enter))),
+            "<ESCAPE>" => return Ok(InputMatcher::Key(key(KeyCode::Escape))),
+            "<BACKSPACE>" => return Ok(InputMatcher::Key(key(KeyCode::Backspace))),
+            "<TAB>" => return Ok(InputMatcher::Key(key(KeyCode::Tab))),
+            "<BACKTAB>" => return Ok(InputMatcher::Key(key(KeyCode::BackTab))),
+            "<DELETE>" => return Ok(InputMatcher::Key(key(KeyCode::Delete))),
+            "<INSERT>" => return Ok(InputMatcher::Key(key(KeyCode::Insert))),
+            "<HOME>" => return Ok(InputMatcher::Key(key(KeyCode::Home))),
+            "<END>" => return Ok(InputMatcher::Key(key(KeyCode::End))),
+            "<PAGEUP>" => return Ok(InputMatcher::Key(key(KeyCode::PageUp))),
+            "<PAGEDOWN>" => return Ok(InputMatcher::Key(key(KeyCode::PageDown))),
             _ => {}
         }
 
@@ -95,14 +98,14 @@ impl std::str::FromStr for KeyMatcher {
             && chars.next().is_none()
         {
             let code = KeyCode::Char(ch);
-            Ok(KeyMatcher::Literal(key(code)))
+            Ok(InputMatcher::Key(key(code)))
         } else if let Some(hex_str) = remaining.strip_prefix("0x") {
             // Handle hex notation for control chars such as 0x7f
             match u32::from_str_radix(hex_str, 16) {
                 Ok(code_point) => {
                     if let Some(ch) = char::from_u32(code_point) {
                         let code = KeyCode::Char(ch);
-                        Ok(KeyMatcher::Literal(key(code)))
+                        Ok(InputMatcher::Key(key(code)))
                     } else {
                         Err(format!("invalid Unicode code point: 0x{:x}", code_point))
                     }
@@ -115,7 +118,7 @@ impl std::str::FromStr for KeyMatcher {
     }
 }
 
-impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for KeyMatcher {
+impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for InputMatcher {
     type Error = nojson::JsonParseError;
 
     fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
@@ -126,12 +129,12 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for KeyMatcher {
     }
 }
 
-impl std::fmt::Display for KeyMatcher {
+impl std::fmt::Display for InputMatcher {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::PrintableChar => write!(f, "<PRINTABLE>"),
-            Self::Any => write!(f, "<ANY>"),
-            Self::Literal(key) => {
+            Self::PrintableKey => write!(f, "<PRINTABLE_KEY>"),
+            Self::AnyKey => write!(f, "<ANY_KEY>"),
+            Self::Key(key) => {
                 if key.alt {
                     write!(f, "M-")?;
                 }
@@ -163,7 +166,7 @@ impl std::fmt::Display for KeyMatcher {
     }
 }
 
-impl nojson::DisplayJson for KeyMatcher {
+impl nojson::DisplayJson for InputMatcher {
     fn fmt(&self, f: &mut nojson::JsonFormatter<'_, '_>) -> std::fmt::Result {
         f.string(self)
     }

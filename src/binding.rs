@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use crate::action::{Action, ContextName};
-use crate::matcher::KeyMatcher;
+use crate::matcher::InputMatcher;
 
 #[derive(Debug, Clone)]
 pub struct InputMapRegistry<A> {
@@ -29,10 +29,10 @@ pub struct InputMap<A> {
 
 impl<A: Action> InputMap<A> {
     /// Finds the first binding that matches the given key input.
-    pub fn get_binding(&self, key: tuinix::KeyInput) -> Option<&InputBinding<A>> {
+    pub fn get_binding(&self, input: tuinix::TerminalInput) -> Option<&InputBinding<A>> {
         self.bindings
             .iter()
-            .find(|b| b.triggers.iter().any(|k| k.matches(key)))
+            .find(|b| b.triggers.iter().any(|t| t.matches(input)))
     }
 
     /// Returns an iterator over all keybindings in this keymap.
@@ -55,7 +55,7 @@ impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Inpu
 #[derive(Debug, Clone)]
 pub struct InputBinding<A> {
     /// TODO: doc
-    pub triggers: Vec<KeyMatcher>,
+    pub triggers: Vec<InputMatcher>,
 
     /// Optional human-readable label for display purposes
     pub label: Option<String>,
