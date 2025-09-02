@@ -5,11 +5,11 @@
 //! into different contexts, each with their own set of keybindings.
 use std::path::Path;
 
+use crate::binding::KeymapRegistry;
 use crate::json::LoadJsonError;
-use crate::keybinding::KeymapRegistry;
 
-pub use crate::keybinding::{Keybinding, Keymap};
-pub use crate::keymatcher::KeyMatcher;
+pub use crate::binding::{Keybinding, Keymap};
+pub use crate::matcher::KeyMatcher;
 
 /// Marker trait for types that can be deserialized from JSON as action definitions.
 pub trait Action:

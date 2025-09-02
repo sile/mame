@@ -3,7 +3,7 @@ use crate::terminal::str_cols;
 
 /// Creates a displayable representation of a key input.
 pub fn key(key: tuinix::KeyInput) -> impl std::fmt::Display {
-    crate::keymatcher::KeyMatcher::Literal(key)
+    crate::matcher::KeyMatcher::Literal(key)
 }
 
 /// Creates a displayable padding string with the specified character repeated a given number of times.
