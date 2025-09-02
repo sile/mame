@@ -32,7 +32,7 @@ impl<A: Action> Keymap<A> {
     pub fn get_binding(&self, key: tuinix::KeyInput) -> Option<&Keybinding<A>> {
         self.bindings
             .iter()
-            .find(|b| b.keys.iter().any(|k| k.matches(key)))
+            .find(|b| b.triggers.iter().any(|k| k.matches(key)))
     }
 
     /// Returns an iterator over all keybindings in this keymap.
@@ -54,13 +54,13 @@ impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Keym
 /// A single key binding that maps key combinations to actions within a context.
 #[derive(Debug, Clone)]
 pub struct Keybinding<A> {
-    /// Optional key combinations that trigger this binding
-    pub keys: Vec<KeyMatcher>,
+    /// TODO: doc
+    pub triggers: Vec<KeyMatcher>,
 
     /// Optional human-readable label for display purposes
     pub label: Option<String>,
 
-    /// Optional action to execute when keys are pressed
+    /// TODO: doc
     pub action: Option<A>,
 
     /// Optional context to switch to when this binding is activated
@@ -72,8 +72,8 @@ impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Keyb
 
     fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
         Ok(Self {
-            keys: value
-                .to_member("keys")?
+            triggers: value
+                .to_member("triggers")?
                 .map(TryFrom::try_from)?
                 .unwrap_or_default(),
             label: value.to_member("label")?.map(TryFrom::try_from)?,
