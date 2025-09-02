@@ -12,10 +12,19 @@ impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Inpu
     type Error = nojson::JsonParseError;
 
     fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
+        let mut next_binding_id = 0;
         Ok(Self {
             contexts: value
                 .to_object()?
-                .map(|(k, v)| Ok((k.try_into()?, v.try_into()?)))
+                .map(|(k, v)| {
+                    let context_name = k.try_into()?;
+                    let mut input_map: InputMap<_> = v.try_into()?;
+                    for b in &mut input_map.bindings {
+                        b.id.0 = next_binding_id;
+                        next_binding_id += 1;
+                    }
+                    Ok((context_name, input_map))
+                })
                 .collect::<Result<_, _>>()?,
         })
     }
@@ -57,9 +66,19 @@ impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Inpu
     }
 }
 
+/// A unique identifier for an input binding.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct InputBindingId(usize);
+
 /// A single input binding that maps terminal input patterns to actions within a context.
 #[derive(Debug, Clone)]
 pub struct InputBinding<A> {
+    /// A unique identifier for this input binding.
+    ///
+    /// This ID is automatically assigned during JSON parsing and is unique across all bindings
+    /// in all contexts. It can be used for tracking, debugging, or referencing specific bindings.
+    pub id: InputBindingId,
+
     /// Input patterns that trigger this binding (keyboard keys, mouse events, etc.)
     pub triggers: Vec<InputMatcher>,
 
@@ -78,6 +97,7 @@ impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Inpu
 
     fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
         Ok(Self {
+            id: InputBindingId::default(), // [NOTE] This field will be updated after JSON parsing is complete
             triggers: value
                 .to_member("triggers")?
                 .map(TryFrom::try_from)?
