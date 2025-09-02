@@ -1,4 +1,4 @@
-use tuinix::{KeyCode, KeyInput};
+use tuinix::{KeyCode, KeyInput, MouseEvent};
 
 /// Matches keyboard input against specific patterns.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -11,6 +11,9 @@ pub enum InputMatcher {
 
     /// Matches any key input
     AnyKey,
+
+    /// TODO: doc
+    Mouse(MouseEvent),
 }
 
 impl InputMatcher {
@@ -32,8 +35,11 @@ impl InputMatcher {
                     }
                 }
                 InputMatcher::AnyKey => true,
+                _ => false,
             },
-            _ => todo!(),
+            tuinix::TerminalInput::Mouse(m) => {
+                matches!(self, InputMatcher::Mouse(e) if e == m.event)
+            }
         }
     }
 }
@@ -71,8 +77,9 @@ impl std::str::FromStr for InputMatcher {
             }
         }
 
-        // Handle special keys in angle brackets
+        // Handle special keys and mouse events in angle brackets
         let key = |code| InputMatcher::Key(KeyInput { ctrl, alt, code });
+        let mouse = |event| InputMatcher::Mouse(event);
         match remaining {
             "<UP>" => return Ok(key(KeyCode::Up)),
             "<DOWN>" => return Ok(key(KeyCode::Down)),
@@ -89,6 +96,15 @@ impl std::str::FromStr for InputMatcher {
             "<END>" => return Ok(key(KeyCode::End)),
             "<PAGEUP>" => return Ok(key(KeyCode::PageUp)),
             "<PAGEDOWN>" => return Ok(key(KeyCode::PageDown)),
+            "<MOUSE_LEFT_PRESS>" => return Ok(mouse(MouseEvent::LeftPress)),
+            "<MOUSE_LEFT_RELEASE>" => return Ok(mouse(MouseEvent::LeftRelease)),
+            "<MOUSE_RIGHT_PRESS>" => return Ok(mouse(MouseEvent::RightPress)),
+            "<MOUSE_RIGHT_RELEASE>" => return Ok(mouse(MouseEvent::RightRelease)),
+            "<MOUSE_MIDDLE_PRESS>" => return Ok(mouse(MouseEvent::MiddlePress)),
+            "<MOUSE_MIDDLE_RELEASE>" => return Ok(mouse(MouseEvent::MiddleRelease)),
+            "<MOUSE_DRAG>" => return Ok(mouse(MouseEvent::Drag)),
+            "<MOUSE_SCROLL_UP>" => return Ok(mouse(MouseEvent::ScrollUp)),
+            "<MOUSE_SCROLL_DOWN>" => return Ok(mouse(MouseEvent::ScrollDown)),
             _ => {}
         }
 
@@ -162,6 +178,17 @@ impl std::fmt::Display for InputMatcher {
                     KeyCode::Char(ch) => write!(f, "{ch}"),
                 }
             }
+            Self::Mouse(mouse) => match mouse {
+                MouseEvent::LeftPress => write!(f, "<MOUSE_LEFT_PRESS>"),
+                MouseEvent::LeftRelease => write!(f, "<MOUSE_LEFT_RELEASE>"),
+                MouseEvent::RightPress => write!(f, "<MOUSE_RIGHT_PRESS>"),
+                MouseEvent::RightRelease => write!(f, "<MOUSE_RIGHT_RELEASE>"),
+                MouseEvent::MiddlePress => write!(f, "<MOUSE_MIDDLE_PRESS>"),
+                MouseEvent::MiddleRelease => write!(f, "<MOUSE_MIDDLE_RELEASE>"),
+                MouseEvent::Drag => write!(f, "<MOUSE_DRAG>"),
+                MouseEvent::ScrollUp => write!(f, "<MOUSE_SCROLL_UP>"),
+                MouseEvent::ScrollDown => write!(f, "<MOUSE_SCROLL_DOWN>"),
+            },
         }
     }
 }
