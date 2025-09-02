@@ -21,21 +21,27 @@ impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Inpu
     }
 }
 
-/// A collection of key bindings for a specific context.
+/// A collection of input bindings for a specific context.
+///
+/// Each input map contains a list of bindings that define how terminal inputs
+/// (keyboard and mouse events) should be handled within that context.
 #[derive(Debug, Clone)]
 pub struct InputMap<A> {
     bindings: Vec<InputBinding<A>>,
 }
 
 impl<A: Action> InputMap<A> {
-    /// Finds the first binding that matches the given key input.
+    /// Finds the first binding that matches the given terminal input.
+    ///
+    /// Returns the first binding whose triggers match the provided input,
+    /// or `None` if no matching binding is found.
     pub fn get_binding(&self, input: tuinix::TerminalInput) -> Option<&InputBinding<A>> {
         self.bindings
             .iter()
             .find(|b| b.triggers.iter().any(|t| t.matches(input)))
     }
 
-    /// Returns an iterator over all keybindings in this keymap.
+    /// Returns an iterator over all input bindings in this input map.
     pub fn bindings(&self) -> impl '_ + Iterator<Item = &InputBinding<A>> {
         self.bindings.iter()
     }
@@ -51,16 +57,16 @@ impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Inpu
     }
 }
 
-/// TODO: doc
+/// A single input binding that maps terminal input patterns to actions within a context.
 #[derive(Debug, Clone)]
 pub struct InputBinding<A> {
-    /// TODO: doc
+    /// Input patterns that trigger this binding (keyboard keys, mouse events, etc.)
     pub triggers: Vec<InputMatcher>,
 
     /// Optional human-readable label for display purposes
     pub label: Option<String>,
 
-    /// TODO: doc
+    /// Optional action to execute when the binding is triggered
     pub action: Option<A>,
 
     /// Optional context to switch to when this binding is activated
