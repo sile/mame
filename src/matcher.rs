@@ -7,7 +7,7 @@ pub enum InputMatcher {
     Key(KeyInput),
 
     /// Matches any printable character
-    PrintableKey,
+    Printable,
 
     /// Matches a specific mouse event
     Mouse(MouseEvent),
@@ -19,7 +19,7 @@ impl InputMatcher {
         match input {
             tuinix::TerminalInput::Key(key) => match self {
                 InputMatcher::Key(k) => k == key,
-                InputMatcher::PrintableKey => {
+                InputMatcher::Printable => {
                     if let KeyInput {
                         ctrl: false,
                         alt: false,
@@ -44,8 +44,8 @@ impl std::str::FromStr for InputMatcher {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s == "<PRINTABLEKEY>" {
-            return Ok(InputMatcher::PrintableKey);
+        if s == "<PRINTABLE>" {
+            return Ok(InputMatcher::Printable);
         }
 
         // Handle modifier key combinations like "C-c", "M-x"
@@ -150,7 +150,7 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for InputMatcher {
 impl std::fmt::Display for InputMatcher {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::PrintableKey => write!(f, "<PRINTABLEKEY>"),
+            Self::Printable => write!(f, "<PRINTABLE>"),
             Self::Key(key) => {
                 if key.alt {
                     write!(f, "M-")?;
