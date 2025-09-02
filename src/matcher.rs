@@ -96,15 +96,15 @@ impl std::str::FromStr for InputMatcher {
             "<END>" => return Ok(key(KeyCode::End)),
             "<PAGEUP>" => return Ok(key(KeyCode::PageUp)),
             "<PAGEDOWN>" => return Ok(key(KeyCode::PageDown)),
-            "<MOUSE_LEFT_PRESS>" => return Ok(mouse(MouseEvent::LeftPress)),
-            "<MOUSE_LEFT_RELEASE>" => return Ok(mouse(MouseEvent::LeftRelease)),
-            "<MOUSE_RIGHT_PRESS>" => return Ok(mouse(MouseEvent::RightPress)),
-            "<MOUSE_RIGHT_RELEASE>" => return Ok(mouse(MouseEvent::RightRelease)),
-            "<MOUSE_MIDDLE_PRESS>" => return Ok(mouse(MouseEvent::MiddlePress)),
-            "<MOUSE_MIDDLE_RELEASE>" => return Ok(mouse(MouseEvent::MiddleRelease)),
-            "<MOUSE_DRAG>" => return Ok(mouse(MouseEvent::Drag)),
-            "<MOUSE_SCROLL_UP>" => return Ok(mouse(MouseEvent::ScrollUp)),
-            "<MOUSE_SCROLL_DOWN>" => return Ok(mouse(MouseEvent::ScrollDown)),
+            "<LEFT_BUTTON_PRESS>" => return Ok(mouse(MouseEvent::LeftPress)),
+            "<LEFT_BUTTON_RELEASE>" => return Ok(mouse(MouseEvent::LeftRelease)),
+            "<RIGHT_BUTTON_PRESS>" => return Ok(mouse(MouseEvent::RightPress)),
+            "<RIGHT_BUTTON_RELEASE>" => return Ok(mouse(MouseEvent::RightRelease)),
+            "<MIDDLE_BUTTON_PRESS>" => return Ok(mouse(MouseEvent::MiddlePress)),
+            "<MIDDLE_BUTTON_RELEASE>" => return Ok(mouse(MouseEvent::MiddleRelease)),
+            "<DRAG>" => return Ok(mouse(MouseEvent::Drag)),
+            "<WHEEL_UP>" => return Ok(mouse(MouseEvent::ScrollUp)),
+            "<WHEEL_DOWN>" => return Ok(mouse(MouseEvent::ScrollDown)),
             _ => {}
         }
 
@@ -179,15 +179,15 @@ impl std::fmt::Display for InputMatcher {
                 }
             }
             Self::Mouse(mouse) => match mouse {
-                MouseEvent::LeftPress => write!(f, "<MOUSE_LEFT_PRESS>"),
-                MouseEvent::LeftRelease => write!(f, "<MOUSE_LEFT_RELEASE>"),
-                MouseEvent::RightPress => write!(f, "<MOUSE_RIGHT_PRESS>"),
-                MouseEvent::RightRelease => write!(f, "<MOUSE_RIGHT_RELEASE>"),
-                MouseEvent::MiddlePress => write!(f, "<MOUSE_MIDDLE_PRESS>"),
-                MouseEvent::MiddleRelease => write!(f, "<MOUSE_MIDDLE_RELEASE>"),
-                MouseEvent::Drag => write!(f, "<MOUSE_DRAG>"),
-                MouseEvent::ScrollUp => write!(f, "<MOUSE_SCROLL_UP>"),
-                MouseEvent::ScrollDown => write!(f, "<MOUSE_SCROLL_DOWN>"),
+                MouseEvent::LeftPress => write!(f, "<LEFT_BUTTON_PRESS>"),
+                MouseEvent::LeftRelease => write!(f, "<LEFT_BUTTON_RELEASE>"),
+                MouseEvent::RightPress => write!(f, "<RIGHT_BUTTON_PRESS>"),
+                MouseEvent::RightRelease => write!(f, "<RIGHT_BUTTON_RELEASE>"),
+                MouseEvent::MiddlePress => write!(f, "<MIDDLE_BUTTON_PRESS>"),
+                MouseEvent::MiddleRelease => write!(f, "<MIDDLE_BUTTON_RELEASE>"),
+                MouseEvent::Drag => write!(f, "<DRAG>"),
+                MouseEvent::ScrollUp => write!(f, "<WHEEL_UP>"),
+                MouseEvent::ScrollDown => write!(f, "<WHEEL_DOWN>"),
             },
         }
     }
