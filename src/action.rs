@@ -9,7 +9,7 @@ use std::path::Path;
 use crate::binding::ContextualBindings;
 use crate::json::LoadJsonError;
 
-pub use crate::binding::{InputBinding, InputBindingId};
+pub use crate::binding::{Binding, BindingId};
 pub use crate::matcher::InputMatcher;
 
 /// Marker trait for types that can be deserialized from JSON as action definitions.
@@ -29,7 +29,7 @@ pub struct ActionBindingSystem<A> {
     setup_action: Option<A>,
     contextual_bindings: ContextualBindings<A>,
     last_input: Option<tuinix::TerminalInput>,
-    last_binding_id: Option<InputBindingId>,
+    last_binding_id: Option<BindingId>,
 }
 
 impl<A: Action> ActionBindingSystem<A> {
@@ -54,7 +54,7 @@ impl<A: Action> ActionBindingSystem<A> {
     /// against the current context's input bindings. If a matching binding is found and it
     /// specifies a context change, the active context will be switched before returning the
     /// binding.
-    pub fn handle_input(&mut self, input: tuinix::TerminalInput) -> Option<&InputBinding<A>> {
+    pub fn handle_input(&mut self, input: tuinix::TerminalInput) -> Option<&Binding<A>> {
         self.last_input = Some(input);
         self.last_binding_id = None;
 
@@ -97,14 +97,14 @@ impl<A: Action> ActionBindingSystem<A> {
     /// This method never panics. The current context is guaranteed to exist in the
     /// contextual bindings map, as it is validated during initialization and can only
     /// be changed to existing contexts via `set_current_context()`.
-    pub fn current_bindings(&self) -> &[InputBinding<A>] {
+    pub fn current_bindings(&self) -> &[Binding<A>] {
         &self.contextual_bindings.bindings[&self.context]
     }
 
     /// Returns an iterator over all contexts and their associated input bindings.
     ///
     /// This provides access to all configured contexts, not just the currently active one.
-    pub fn all_bindings(&self) -> impl '_ + Iterator<Item = (&ContextName, &[InputBinding<A>])> {
+    pub fn all_bindings(&self) -> impl '_ + Iterator<Item = (&ContextName, &[Binding<A>])> {
         self.contextual_bindings
             .bindings
             .iter()
@@ -124,7 +124,7 @@ impl<A: Action> ActionBindingSystem<A> {
     ///
     /// This tracks the unique identifier of the most recent binding returned by `handle_input()`.
     /// Returns `None` if no input has been processed yet or if the last input didn't match any binding.
-    pub fn last_binding_id(&self) -> Option<InputBindingId> {
+    pub fn last_binding_id(&self) -> Option<BindingId> {
         self.last_binding_id
     }
 }
