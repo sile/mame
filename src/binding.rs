@@ -4,8 +4,8 @@ use crate::action::{Action, ContextName};
 use crate::matcher::InputMatcher;
 
 #[derive(Debug, Clone)]
-pub struct ContextualBindings<A> {
-    pub bindings: BTreeMap<ContextName, Vec<InputBinding<A>>>,
+pub(crate) struct ContextualBindings<A> {
+    pub(crate) bindings: BTreeMap<ContextName, Vec<InputBinding<A>>>,
 }
 
 impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ContextualBindings<A> {

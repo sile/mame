@@ -92,7 +92,7 @@ impl<A: Action> ActionBindingSystem<A> {
     /// The bindings are returned in the order they appear in the configuration,
     /// which is also the order they are checked during input matching.
     pub fn current_bindings(&self) -> &[InputBinding<A>] {
-        &self.contextual_bindings.bindings[&self.context]
+        &self.contextual_bindings.bindings[&self.context] // [NOTE] The context is guaranteed to exist
     }
 
     /// Returns an iterator over all contexts and their associated input bindings.
