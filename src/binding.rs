@@ -5,7 +5,7 @@ use crate::matcher::InputMatcher;
 
 #[derive(Debug, Clone)]
 pub(crate) struct ContextualBindings<A> {
-    pub(crate) bindings: BTreeMap<ContextName, Vec<InputBinding<A>>>,
+    pub(crate) bindings: BTreeMap<ContextName, Vec<Binding<A>>>,
 }
 
 impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ContextualBindings<A> {
@@ -18,7 +18,7 @@ impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Cont
                 .to_object()?
                 .map(|(k, v)| {
                     let context_name = k.try_into()?;
-                    let mut bindings: Vec<InputBinding<_>> = v.try_into()?;
+                    let mut bindings: Vec<Binding<_>> = v.try_into()?;
                     for b in &mut bindings {
                         b.id.0 = next_binding_id;
                         next_binding_id += 1;
@@ -32,16 +32,16 @@ impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Cont
 
 /// A unique identifier for an input binding.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct InputBindingId(usize);
+pub struct BindingId(usize);
 
 /// A single input binding that maps terminal input patterns to actions within a context.
 #[derive(Debug, Clone)]
-pub struct InputBinding<A> {
+pub struct Binding<A> {
     /// A unique identifier for this input binding.
     ///
     /// This ID is automatically assigned during JSON parsing and is unique across all bindings
     /// in all contexts. It can be used for tracking, debugging, or referencing specific bindings.
-    pub id: InputBindingId,
+    pub id: BindingId,
 
     /// Input patterns that trigger this binding (keyboard keys, mouse events, etc.)
     pub triggers: Vec<InputMatcher>,
@@ -56,7 +56,7 @@ pub struct InputBinding<A> {
     pub context: Option<ContextName>,
 }
 
-impl<A: Action> InputBinding<A> {
+impl<A: Action> Binding<A> {
     /// Checks if this binding matches the given terminal input.
     ///
     /// Returns `true` if any of the binding's triggers match the provided input.
@@ -65,12 +65,12 @@ impl<A: Action> InputBinding<A> {
     }
 }
 
-impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for InputBinding<A> {
+impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Binding<A> {
     type Error = nojson::JsonParseError;
 
     fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
         Ok(Self {
-            id: InputBindingId::default(), // [NOTE] This field will be updated after JSON parsing is complete
+            id: BindingId::default(), // [NOTE] This field will be updated after JSON parsing is complete
             triggers: value
                 .to_member("triggers")?
                 .map(TryFrom::try_from)?
