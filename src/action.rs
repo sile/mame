@@ -18,13 +18,13 @@ pub trait Action:
 {
 }
 
-/// Configuration for a context-aware action system with input bindings.
+/// A context-aware action binding system with configurable input bindings.
 ///
 /// Manages multiple input bindings organized by context, with an optional setup action
 /// and the ability to switch between different input contexts at runtime. Supports
 /// both keyboard and mouse input events.
 #[derive(Debug)]
-pub struct ActionConfig<A> {
+pub struct ActionBindingSystem<A> {
     context: ContextName,
     setup_action: Option<A>,
     contextual_bindings: ContextualBindings<A>,
@@ -32,15 +32,15 @@ pub struct ActionConfig<A> {
     last_binding_id: Option<InputBindingId>,
 }
 
-impl<A: Action> ActionConfig<A> {
-    /// Loads an action configuration from a JSONC file.
+impl<A: Action> ActionBindingSystem<A> {
+    /// Loads an action binding system configuration from a JSONC file.
     pub fn load_from_file<P: AsRef<Path>>(path: P) -> Result<Self, LoadJsonError> {
-        crate::json::load_jsonc_file(path, |v| ActionConfig::try_from(v))
+        crate::json::load_jsonc_file(path, |v| Self::try_from(v))
     }
 
-    /// Loads an action configuration from a JSONC string.
+    /// Loads an action binding system configuration from a JSONC string.
     pub fn load_from_str(name: &str, text: &str) -> Result<Self, LoadJsonError> {
-        crate::json::load_jsonc_str(name, text, |v| ActionConfig::try_from(v))
+        crate::json::load_jsonc_str(name, text, |v| Self::try_from(v))
     }
 
     /// Returns the optional setup action that runs during initialization.
@@ -123,7 +123,7 @@ impl<A: Action> ActionConfig<A> {
     }
 }
 
-impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ActionConfig<A> {
+impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ActionBindingSystem<A> {
     type Error = nojson::JsonParseError;
 
     fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
