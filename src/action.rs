@@ -6,10 +6,10 @@
 //! both keyboard and mouse events.
 use std::path::Path;
 
-use crate::binding::InputMapRegistry;
+use crate::binding::ContextualBindings;
 use crate::json::LoadJsonError;
 
-pub use crate::binding::{InputBinding, InputBindingId, InputMap};
+pub use crate::binding::{InputBinding, InputBindingId};
 pub use crate::matcher::InputMatcher;
 
 /// Marker trait for types that can be deserialized from JSON as action definitions.
@@ -18,29 +18,29 @@ pub trait Action:
 {
 }
 
-/// Configuration for a context-aware action system with input bindings.
+/// A context-aware action binding system with configurable input bindings.
 ///
-/// Manages multiple input maps organized by context, with an optional setup action
+/// Manages multiple input bindings organized by context, with an optional setup action
 /// and the ability to switch between different input contexts at runtime. Supports
 /// both keyboard and mouse input events.
 #[derive(Debug)]
-pub struct ActionConfig<A> {
+pub struct ActionBindingSystem<A> {
     context: ContextName,
     setup_action: Option<A>,
-    input_map_registry: InputMapRegistry<A>,
+    contextual_bindings: ContextualBindings<A>,
     last_input: Option<tuinix::TerminalInput>,
     last_binding_id: Option<InputBindingId>,
 }
 
-impl<A: Action> ActionConfig<A> {
-    /// Loads an action configuration from a JSONC file.
+impl<A: Action> ActionBindingSystem<A> {
+    /// Loads an action binding system configuration from a JSONC file.
     pub fn load_from_file<P: AsRef<Path>>(path: P) -> Result<Self, LoadJsonError> {
-        crate::json::load_jsonc_file(path, |v| ActionConfig::try_from(v))
+        crate::json::load_jsonc_file(path, |v| Self::try_from(v))
     }
 
-    /// Loads an action configuration from a JSONC string.
+    /// Loads an action binding system configuration from a JSONC string.
     pub fn load_from_str(name: &str, text: &str) -> Result<Self, LoadJsonError> {
-        crate::json::load_jsonc_str(name, text, |v| ActionConfig::try_from(v))
+        crate::json::load_jsonc_str(name, text, |v| Self::try_from(v))
     }
 
     /// Returns the optional setup action that runs during initialization.
@@ -59,10 +59,11 @@ impl<A: Action> ActionConfig<A> {
         self.last_binding_id = None;
 
         let binding = self
-            .input_map_registry
-            .contexts
+            .contextual_bindings
+            .bindings
             .get(&self.context)?
-            .get_binding(input)?;
+            .iter()
+            .find(|b| b.matches(input))?;
         if let Some(context) = &binding.context {
             self.context = context.clone();
         }
@@ -73,7 +74,7 @@ impl<A: Action> ActionConfig<A> {
 
     /// Sets the current context if it exists, returning true on success.
     pub fn set_current_context(&mut self, context: &ContextName) -> bool {
-        if self.input_map_registry.contexts.contains_key(context) {
+        if self.contextual_bindings.bindings.contains_key(context) {
             self.context = context.clone();
             true
         } else {
@@ -86,19 +87,28 @@ impl<A: Action> ActionConfig<A> {
         &self.context
     }
 
-    /// Returns the input map for the currently active context.
-    pub fn current_input_map(&self) -> &InputMap<A> {
-        &self.input_map_registry.contexts[&self.context]
+    /// Returns all input bindings for the currently active context.
+    ///
+    /// The bindings are returned in the order they appear in the configuration,
+    /// which is also the order they are checked during input matching.
+    ///
+    /// # Panics
+    ///
+    /// This method never panics. The current context is guaranteed to exist in the
+    /// contextual bindings map, as it is validated during initialization and can only
+    /// be changed to existing contexts via `set_current_context()`.
+    pub fn current_bindings(&self) -> &[InputBinding<A>] {
+        &self.contextual_bindings.bindings[&self.context]
     }
 
-    /// Returns the input map for the specified context, if it exists.
-    pub fn get_input_map(&self, context: &ContextName) -> Option<&InputMap<A>> {
-        self.input_map_registry.contexts.get(context)
-    }
-
-    /// Returns an iterator over all contexts and their associated input maps.
-    pub fn input_maps(&self) -> impl '_ + Iterator<Item = (&ContextName, &InputMap<A>)> {
-        self.input_map_registry.contexts.iter()
+    /// Returns an iterator over all contexts and their associated input bindings.
+    ///
+    /// This provides access to all configured contexts, not just the currently active one.
+    pub fn all_bindings(&self) -> impl '_ + Iterator<Item = (&ContextName, &[InputBinding<A>])> {
+        self.contextual_bindings
+            .bindings
+            .iter()
+            .map(|(k, v)| (k, &v[..]))
     }
 
     /// Returns the last terminal input that was processed, if any.
@@ -119,7 +129,7 @@ impl<A: Action> ActionConfig<A> {
     }
 }
 
-impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ActionConfig<A> {
+impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ActionBindingSystem<A> {
     type Error = nojson::JsonParseError;
 
     fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
@@ -127,7 +137,7 @@ impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Acti
         Ok(Self {
             context: setup.to_member("context")?.required()?.try_into()?,
             setup_action: setup.to_member("action")?.map(A::try_from)?,
-            input_map_registry: value.to_member("bindings")?.required()?.try_into()?,
+            contextual_bindings: value.to_member("bindings")?.required()?.try_into()?,
             last_input: None,
             last_binding_id: None,
         })
