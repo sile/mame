@@ -91,8 +91,14 @@ impl<A: Action> ActionBindingSystem<A> {
     ///
     /// The bindings are returned in the order they appear in the configuration,
     /// which is also the order they are checked during input matching.
+    ///
+    /// # Panics
+    ///
+    /// This method never panics. The current context is guaranteed to exist in the
+    /// contextual bindings map, as it is validated during initialization and can only
+    /// be changed to existing contexts via `set_current_context()`.
     pub fn current_bindings(&self) -> &[InputBinding<A>] {
-        &self.contextual_bindings.bindings[&self.context] // [NOTE] The context is guaranteed to exist
+        &self.contextual_bindings.bindings[&self.context]
     }
 
     /// Returns an iterator over all contexts and their associated input bindings.
