@@ -6,7 +6,7 @@
 //! both keyboard and mouse events.
 use std::path::Path;
 
-use crate::binding::InputMapRegistry;
+use crate::binding::ContextualBindings;
 use crate::json::LoadJsonError;
 
 pub use crate::binding::{InputBinding, InputBindingId};
@@ -27,7 +27,7 @@ pub trait Action:
 pub struct ActionConfig<A> {
     context: ContextName,
     setup_action: Option<A>,
-    input_map_registry: InputMapRegistry<A>,
+    contextual_bindings: ContextualBindings<A>,
     last_input: Option<tuinix::TerminalInput>,
     last_binding_id: Option<InputBindingId>,
 }
@@ -59,8 +59,8 @@ impl<A: Action> ActionConfig<A> {
         self.last_binding_id = None;
 
         let binding = self
-            .input_map_registry
-            .contexts
+            .contextual_bindings
+            .bindings
             .get(&self.context)?
             .iter()
             .find(|b| b.matches(input))?;
@@ -74,7 +74,7 @@ impl<A: Action> ActionConfig<A> {
 
     /// Sets the current context if it exists, returning true on success.
     pub fn set_current_context(&mut self, context: &ContextName) -> bool {
-        if self.input_map_registry.contexts.contains_key(context) {
+        if self.contextual_bindings.bindings.contains_key(context) {
             self.context = context.clone();
             true
         } else {
@@ -92,15 +92,15 @@ impl<A: Action> ActionConfig<A> {
     /// The bindings are returned in the order they appear in the configuration,
     /// which is also the order they are checked during input matching.
     pub fn current_bindings(&self) -> &[InputBinding<A>] {
-        &self.input_map_registry.contexts[&self.context]
+        &self.contextual_bindings.bindings[&self.context]
     }
 
     /// Returns an iterator over all contexts and their associated input bindings.
     ///
     /// This provides access to all configured contexts, not just the currently active one.
     pub fn all_bindings(&self) -> impl '_ + Iterator<Item = (&ContextName, &[InputBinding<A>])> {
-        self.input_map_registry
-            .contexts
+        self.contextual_bindings
+            .bindings
             .iter()
             .map(|(k, v)| (k, &v[..]))
     }
@@ -131,7 +131,7 @@ impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Acti
         Ok(Self {
             context: setup.to_member("context")?.required()?.try_into()?,
             setup_action: setup.to_member("action")?.map(A::try_from)?,
-            input_map_registry: value.to_member("bindings")?.required()?.try_into()?,
+            contextual_bindings: value.to_member("bindings")?.required()?.try_into()?,
             last_input: None,
             last_binding_id: None,
         })

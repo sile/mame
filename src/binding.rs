@@ -4,17 +4,17 @@ use crate::action::{Action, ContextName};
 use crate::matcher::InputMatcher;
 
 #[derive(Debug, Clone)]
-pub struct InputMapRegistry<A> {
-    pub contexts: BTreeMap<ContextName, Vec<InputBinding<A>>>,
+pub struct ContextualBindings<A> {
+    pub bindings: BTreeMap<ContextName, Vec<InputBinding<A>>>,
 }
 
-impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for InputMapRegistry<A> {
+impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ContextualBindings<A> {
     type Error = nojson::JsonParseError;
 
     fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
         let mut next_binding_id = 0;
         Ok(Self {
-            contexts: value
+            bindings: value
                 .to_object()?
                 .map(|(k, v)| {
                     let context_name = k.try_into()?;
