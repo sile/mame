@@ -14,10 +14,14 @@ this library provides flexible, composable components that can be combined to cr
 
 ## Features
 
-### Action System
-- **Configurable Actions**: Define custom actions with JSON/JSONC configuration files
-- **Context-Aware Keybindings**: Support for multiple input contexts with different keybinding sets
-- **Key Matching**: Flexible key input parsing supporting modifiers (`C-c`, `M-x`), special keys (`<UP>`, `<ENTER>`), and printable characters
+### Input Binding System
+- **Mouse and Keyboard Support**: Handle both keyboard events (keys, modifiers) and mouse events (clicks, scrolling, dragging)
+- **Configurable Input Bindings**: Define custom input bindings with JSON/JSONC configuration files using the `triggers` field
+- **Context-Aware Bindings**: Support for multiple input contexts with different binding sets that can be switched at runtime
+- **Input Pattern Matching**: Flexible input parsing supporting:
+  - Keyboard: modifiers (`C-c`, `M-x`), special keys (`<UP>`, `<ENTER>`), printable characters, and hex notation (`0x7f`)
+  - Mouse: clicks (`<LEFTCLICK>`, `<RIGHTCLICK>`), scrolling (`<SCROLLUP>`, `<SCROLLDOWN>`), and dragging (`<DRAG>`)
+- **Binding Tracking**: Track the last processed input and successfully matched binding with unique identifiers
 
 ### Terminal Utilities
 - **Unicode-Aware Rendering**: Proper handling of wide characters (CJK, emojis) and zero-width characters
@@ -25,7 +29,7 @@ this library provides flexible, composable components that can be combined to cr
 - **Column Calculation**: Accurate display width calculation for international text
 
 ### UI Components
-- **Legend Rendering**: Create bordered legend boxes for displaying keybinding help
+- **Legend Rendering**: Create bordered legend boxes for displaying input binding help with automatic sizing
 - **File Preview**: Side-by-side file preview panes with automatic layout
 
 ### Command Execution
@@ -34,4 +38,9 @@ this library provides flexible, composable components that can be combined to cr
 ### Configuration
 - **JSONC Support**: JSON with comments for human-friendly configuration files
 - **Variable Resolution**: Template variables with environment variable support
+- **Binding Structure**: Updated configuration format using `bindings` instead of `keybindings`, with `triggers` arrays for each binding
+
+### Formatting Utilities
+- **Input Display**: Format both keyboard and mouse inputs for display purposes
+- **Flexible Padding**: Create padded strings with customizable characters
 
