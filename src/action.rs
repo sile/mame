@@ -52,9 +52,9 @@ impl<A: Action> ActionBindingSystem<A> {
     /// Processes terminal input and returns the matching input binding, if any.
     ///
     /// This method takes terminal input (keyboard or mouse events) and attempts to match it
-    /// against the current context's input bindings. If a matching binding is found and it
-    /// specifies a context change, the active context will be switched before returning the
-    /// binding.
+    /// against the current context's input bindings. If a matching binding is found, it will
+    /// be stored as the last binding. To apply any context changes specified in the binding,
+    /// call `apply_last_context_switch()` after this method.
     pub fn handle_input(&mut self, input: tuinix::TerminalInput) -> Option<Arc<Binding<A>>> {
         self.last_input = Some(input);
         self.last_binding = None;
@@ -65,12 +65,25 @@ impl<A: Action> ActionBindingSystem<A> {
             .get(&self.context)?
             .iter()
             .find(|b| b.matches(input))?;
-        if let Some(context) = &binding.context {
-            self.context = context.clone();
-        }
-        self.last_binding = Some(binding.clone());
 
+        self.last_binding = Some(binding.clone());
         Some(binding.clone())
+    }
+
+    /// Applies the context switch from the last matched binding, if any.
+    ///
+    /// This method should be called after `handle_input()` to apply any context changes
+    /// specified in the matched binding. Returns `true` if a context switch was applied,
+    /// or `false` if no context switch was needed or no binding was matched.
+    pub fn apply_last_context_switch(&mut self) -> bool {
+        if let Some(binding) = &self.last_binding
+            && let Some(context) = &binding.context
+        {
+            self.context = context.clone();
+            true
+        } else {
+            false
+        }
     }
 
     /// Sets the current context if it exists, returning true on success.
