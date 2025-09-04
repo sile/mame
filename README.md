@@ -21,7 +21,6 @@ this library provides flexible, composable components that can be combined to cr
 - **Input Pattern Matching**: Flexible input parsing supporting:
   - Keyboard: modifiers (`C-c`, `M-x`), special keys (`<UP>`, `<ENTER>`), printable characters, and hex notation (`0x7f`)
   - Mouse: clicks (`<LEFTCLICK>`, `<RIGHTCLICK>`), scrolling (`<SCROLLUP>`, `<SCROLLDOWN>`), and dragging (`<DRAG>`)
-- **Binding Tracking**: Track the last processed input and successfully matched binding with unique identifiers
 
 ### Terminal Utilities
 - **Unicode-Aware Rendering**: Proper handling of wide characters (CJK, emojis) and zero-width characters

@@ -1,12 +1,11 @@
 use std::collections::BTreeMap;
-use std::sync::Arc;
 
-use crate::action::{Action, ContextName};
+use crate::action::{Action, BindingContextName};
 use crate::matcher::InputMatcher;
 
 #[derive(Debug, Clone)]
 pub(crate) struct ContextualBindings<A> {
-    pub(crate) bindings: BTreeMap<ContextName, Vec<Arc<Binding<A>>>>,
+    pub(crate) bindings: BTreeMap<BindingContextName, Vec<Binding<A>>>,
 }
 
 impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ContextualBindings<A> {
@@ -39,7 +38,7 @@ pub struct Binding<A> {
     pub action: Option<A>,
 
     /// Optional context to switch to when this binding is activated
-    pub context: Option<ContextName>,
+    pub context: Option<BindingContextName>,
 }
 
 impl<A: Action> Binding<A> {
