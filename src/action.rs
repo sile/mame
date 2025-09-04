@@ -4,6 +4,19 @@
 //! and input bindings through JSON/JSONC configuration files. Actions can be organized
 //! into different contexts, each with their own set of input bindings that support
 //! both keyboard and mouse events.
+//!
+//! The main component is [`BindingConfig`], which serves as a stateless configuration
+//! container that holds binding definitions loaded from JSON/JSONC files. It provides
+//! read-only access to the configured bindings and contexts without managing runtime
+//! state or input processing.
+//!
+//! # Key Components
+//!
+//! - [`BindingConfig`] - Configuration container for context-aware action bindings
+//! - [`BindingContextName`] - Named context identifier for organizing input bindings
+//! - [`Action`] - Marker trait for types that can be deserialized from JSON as actions
+//! - [`Binding`] - Individual input binding with matcher, action, and optional context switch
+//! - [`InputMatcher`] - Input matching logic for keyboard and mouse events
 use std::path::Path;
 use std::sync::Arc;
 
@@ -66,7 +79,9 @@ impl<A: Action> BindingConfig<A> {
     /// Returns an iterator over all contexts and their associated input bindings.
     ///
     /// This provides access to all configured contexts, not just the currently active one.
-    pub fn all_bindings(&self) -> impl '_ + Iterator<Item = (&BindingContextName, &[Arc<Binding<A>>])> {
+    pub fn all_bindings(
+        &self,
+    ) -> impl '_ + Iterator<Item = (&BindingContextName, &[Arc<Binding<A>>])> {
         self.contextual_bindings
             .bindings
             .iter()
