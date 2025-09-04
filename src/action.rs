@@ -26,13 +26,13 @@ pub trait Action:
 /// that provides read-only access to binding definitions loaded from JSON/JSONC files.
 /// Supports both keyboard and mouse input event definitions.
 #[derive(Debug)]
-pub struct ActionBindingConfig<A> {
+pub struct BindingConfig<A> {
     setup_context: BindingContextName,
     setup_action: Option<A>,
     contextual_bindings: ContextualBindings<A>,
 }
 
-impl<A: Action> ActionBindingConfig<A> {
+impl<A: Action> BindingConfig<A> {
     /// Loads an action binding system configuration from a JSONC file.
     pub fn load_from_file<P: AsRef<Path>>(path: P) -> Result<Self, LoadJsonError> {
         crate::json::load_jsonc_file(path, |v| Self::try_from(v))
@@ -74,7 +74,7 @@ impl<A: Action> ActionBindingConfig<A> {
     }
 }
 
-impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ActionBindingConfig<A> {
+impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for BindingConfig<A> {
     type Error = nojson::JsonParseError;
 
     fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
