@@ -5,6 +5,7 @@
 //! into different contexts, each with their own set of input bindings that support
 //! both keyboard and mouse events.
 use std::path::Path;
+use std::sync::Arc;
 
 use crate::binding::ContextualBindings;
 use crate::json::LoadJsonError;
@@ -54,7 +55,7 @@ impl<A: Action> ActionBindingSystem<A> {
     /// against the current context's input bindings. If a matching binding is found and it
     /// specifies a context change, the active context will be switched before returning the
     /// binding.
-    pub fn handle_input(&mut self, input: tuinix::TerminalInput) -> Option<&Binding<A>> {
+    pub fn handle_input(&mut self, input: tuinix::TerminalInput) -> Option<&Arc<Binding<A>>> {
         self.last_input = Some(input);
         self.last_binding_id = None;
 
@@ -97,14 +98,14 @@ impl<A: Action> ActionBindingSystem<A> {
     /// This method never panics. The current context is guaranteed to exist in the
     /// contextual bindings map, as it is validated during initialization and can only
     /// be changed to existing contexts via `set_current_context()`.
-    pub fn current_bindings(&self) -> &[Binding<A>] {
+    pub fn current_bindings(&self) -> &[Arc<Binding<A>>] {
         &self.contextual_bindings.bindings[&self.context]
     }
 
     /// Returns an iterator over all contexts and their associated input bindings.
     ///
     /// This provides access to all configured contexts, not just the currently active one.
-    pub fn all_bindings(&self) -> impl '_ + Iterator<Item = (&ContextName, &[Binding<A>])> {
+    pub fn all_bindings(&self) -> impl '_ + Iterator<Item = (&ContextName, &[Arc<Binding<A>>])> {
         self.contextual_bindings
             .bindings
             .iter()

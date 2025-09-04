@@ -1,11 +1,12 @@
 use std::collections::BTreeMap;
+use std::sync::Arc;
 
 use crate::action::{Action, ContextName};
 use crate::matcher::InputMatcher;
 
 #[derive(Debug, Clone)]
 pub(crate) struct ContextualBindings<A> {
-    pub(crate) bindings: BTreeMap<ContextName, Vec<Binding<A>>>,
+    pub(crate) bindings: BTreeMap<ContextName, Vec<Arc<Binding<A>>>>,
 }
 
 impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ContextualBindings<A> {
@@ -18,11 +19,7 @@ impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Cont
                 .to_object()?
                 .map(|(k, v)| {
                     let context_name = k.try_into()?;
-                    let mut bindings: Vec<Binding<_>> = v.try_into()?;
-                    for b in &mut bindings {
-                        b.id.0 = next_binding_id;
-                        next_binding_id += 1;
-                    }
+                    let bindings = v.try_into()?;
                     Ok((context_name, bindings))
                 })
                 .collect::<Result<_, _>>()?,
