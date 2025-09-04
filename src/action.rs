@@ -46,12 +46,12 @@ pub struct BindingConfig<A> {
 }
 
 impl<A: Action> BindingConfig<A> {
-    /// Loads an action binding system configuration from a JSONC file.
+    /// Loads an action binding configuration from a JSONC file.
     pub fn load_from_file<P: AsRef<Path>>(path: P) -> Result<Self, LoadJsonError> {
         crate::json::load_jsonc_file(path, |v| Self::try_from(v))
     }
 
-    /// Loads an action binding system configuration from a JSONC string.
+    /// Loads an action binding configuration from a JSONC string.
     pub fn load_from_str(name: &str, text: &str) -> Result<Self, LoadJsonError> {
         crate::json::load_jsonc_str(name, text, |v| Self::try_from(v))
     }
