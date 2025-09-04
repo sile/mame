@@ -19,19 +19,20 @@ pub trait Action:
 {
 }
 
-/// A context-aware action binding system with configurable input bindings.
+/// A configuration container for context-aware action bindings.
 ///
-/// Manages multiple input bindings organized by context, with an optional setup action
-/// and the ability to switch between different input contexts at runtime. Supports
-/// both keyboard and mouse input events.
+/// Holds multiple input bindings organized by context, with an optional setup action
+/// and setup context for initialization. This is a stateless configuration structure
+/// that provides read-only access to binding definitions loaded from JSON/JSONC files.
+/// Supports both keyboard and mouse input event definitions.
 #[derive(Debug)]
-pub struct ActionBindingSystem<A> {
+pub struct ActionBindingConfig<A> {
     setup_context: ContextName,
     setup_action: Option<A>,
     contextual_bindings: ContextualBindings<A>,
 }
 
-impl<A: Action> ActionBindingSystem<A> {
+impl<A: Action> ActionBindingConfig<A> {
     /// Loads an action binding system configuration from a JSONC file.
     pub fn load_from_file<P: AsRef<Path>>(path: P) -> Result<Self, LoadJsonError> {
         crate::json::load_jsonc_file(path, |v| Self::try_from(v))
@@ -73,7 +74,7 @@ impl<A: Action> ActionBindingSystem<A> {
     }
 }
 
-impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ActionBindingSystem<A> {
+impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ActionBindingConfig<A> {
     type Error = nojson::JsonParseError;
 
     fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
