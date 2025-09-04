@@ -18,7 +18,6 @@
 //! - [`Binding`] - Individual input binding with matcher, action, and optional context switch
 //! - [`InputMatcher`] - Input matching logic for keyboard and mouse events
 use std::path::Path;
-use std::sync::Arc;
 
 use crate::binding::ContextualBindings;
 use crate::json::LoadJsonError;
@@ -69,7 +68,7 @@ impl<A: Action> BindingConfig<A> {
     /// Returns the input bindings for the specified context, if it exists.
     ///
     /// The bindings are returned in the order they appear in the configuration.
-    pub fn get_bindings(&self, context: &BindingContextName) -> Option<&[Arc<Binding<A>>]> {
+    pub fn get_bindings(&self, context: &BindingContextName) -> Option<&[Binding<A>]> {
         self.contextual_bindings
             .bindings
             .get(context)
@@ -79,9 +78,7 @@ impl<A: Action> BindingConfig<A> {
     /// Returns an iterator over all contexts and their associated input bindings.
     ///
     /// This provides access to all configured contexts, not just the currently active one.
-    pub fn all_bindings(
-        &self,
-    ) -> impl '_ + Iterator<Item = (&BindingContextName, &[Arc<Binding<A>>])> {
+    pub fn all_bindings(&self) -> impl '_ + Iterator<Item = (&BindingContextName, &[Binding<A>])> {
         self.contextual_bindings
             .bindings
             .iter()
