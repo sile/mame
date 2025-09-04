@@ -92,6 +92,16 @@ impl<A: Action> ActionBindingSystem<A> {
         &self.contextual_bindings.bindings[&self.context]
     }
 
+    /// Returns the input bindings for the specified context, if it exists.
+    ///
+    /// The bindings are returned in the order they appear in the configuration.
+    pub fn get_bindings(&self, context: &ContextName) -> Option<&[Arc<Binding<A>>]> {
+        self.contextual_bindings
+            .bindings
+            .get(context)
+            .map(|bindings| &bindings[..])
+    }
+
     /// Returns an iterator over all contexts and their associated input bindings.
     ///
     /// This provides access to all configured contexts, not just the currently active one.
