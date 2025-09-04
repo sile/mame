@@ -27,7 +27,7 @@ pub trait Action:
 /// Supports both keyboard and mouse input event definitions.
 #[derive(Debug)]
 pub struct ActionBindingConfig<A> {
-    setup_context: ContextName,
+    setup_context: BindingContextName,
     setup_action: Option<A>,
     contextual_bindings: ContextualBindings<A>,
 }
@@ -44,7 +44,7 @@ impl<A: Action> ActionBindingConfig<A> {
     }
 
     /// Returns the initial context name.
-    pub fn setup_context(&self) -> &ContextName {
+    pub fn setup_context(&self) -> &BindingContextName {
         &self.setup_context
     }
 
@@ -56,7 +56,7 @@ impl<A: Action> ActionBindingConfig<A> {
     /// Returns the input bindings for the specified context, if it exists.
     ///
     /// The bindings are returned in the order they appear in the configuration.
-    pub fn get_bindings(&self, context: &ContextName) -> Option<&[Arc<Binding<A>>]> {
+    pub fn get_bindings(&self, context: &BindingContextName) -> Option<&[Arc<Binding<A>>]> {
         self.contextual_bindings
             .bindings
             .get(context)
@@ -66,7 +66,7 @@ impl<A: Action> ActionBindingConfig<A> {
     /// Returns an iterator over all contexts and their associated input bindings.
     ///
     /// This provides access to all configured contexts, not just the currently active one.
-    pub fn all_bindings(&self) -> impl '_ + Iterator<Item = (&ContextName, &[Arc<Binding<A>>])> {
+    pub fn all_bindings(&self) -> impl '_ + Iterator<Item = (&BindingContextName, &[Arc<Binding<A>>])> {
         self.contextual_bindings
             .bindings
             .iter()
@@ -92,9 +92,9 @@ impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Acti
 /// Contexts allow grouping related input bindings together. Each context
 /// can contain bindings for both keyboard and mouse events.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct ContextName(String);
+pub struct BindingContextName(String);
 
-impl ContextName {
+impl BindingContextName {
     /// Creates a new context name from a string.
     pub fn new(name: &str) -> Self {
         Self(name.to_owned())
@@ -106,7 +106,7 @@ impl ContextName {
     }
 }
 
-impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ContextName {
+impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for BindingContextName {
     type Error = nojson::JsonParseError;
 
     fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
