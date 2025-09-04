@@ -26,7 +26,7 @@ pub trait Action:
 /// both keyboard and mouse input events.
 #[derive(Debug)]
 pub struct ActionBindingSystem<A> {
-    context: ContextName,
+    setup_context: ContextName,
     setup_action: Option<A>,
     contextual_bindings: ContextualBindings<A>,
 }
@@ -42,54 +42,14 @@ impl<A: Action> ActionBindingSystem<A> {
         crate::json::load_jsonc_str(name, text, |v| Self::try_from(v))
     }
 
+    /// Returns the initial context name.
+    pub fn setup_context(&self) -> &ContextName {
+        &self.setup_context
+    }
+
     /// Returns the optional setup action that runs during initialization.
     pub fn setup_action(&self) -> Option<&A> {
         self.setup_action.as_ref()
-    }
-
-    /// Processes terminal input and returns the matching input binding, if any.
-    ///
-    /// This method takes terminal input (keyboard or mouse events) and attempts to match it
-    /// against the current context's input bindings. If a matching binding is found, it will
-    /// be stored as the last binding. To apply any context changes specified in the binding,
-    /// call `apply_last_context_switch()` after this method.
-    pub fn handle_input(&mut self, input: tuinix::TerminalInput) -> Option<Arc<Binding<A>>> {
-        let binding = self
-            .contextual_bindings
-            .bindings
-            .get(&self.context)?
-            .iter()
-            .find(|b| b.matches(input))?;
-        Some(binding.clone())
-    }
-
-    /// Sets the current context if it exists, returning true on success.
-    pub fn set_current_context(&mut self, context: &ContextName) -> bool {
-        if self.contextual_bindings.bindings.contains_key(context) {
-            self.context = context.clone();
-            true
-        } else {
-            false
-        }
-    }
-
-    /// Returns the name of the currently active context.
-    pub fn current_context(&self) -> &ContextName {
-        &self.context
-    }
-
-    /// Returns all input bindings for the currently active context.
-    ///
-    /// The bindings are returned in the order they appear in the configuration,
-    /// which is also the order they are checked during input matching.
-    ///
-    /// # Panics
-    ///
-    /// This method never panics. The current context is guaranteed to exist in the
-    /// contextual bindings map, as it is validated during initialization and can only
-    /// be changed to existing contexts via `set_current_context()`.
-    pub fn current_bindings(&self) -> &[Arc<Binding<A>>] {
-        &self.contextual_bindings.bindings[&self.context]
     }
 
     /// Returns the input bindings for the specified context, if it exists.
@@ -119,7 +79,7 @@ impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Acti
     fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
         let setup = value.to_member("setup")?.required()?;
         Ok(Self {
-            context: setup.to_member("context")?.required()?.try_into()?,
+            setup_context: setup.to_member("context")?.required()?.try_into()?,
             setup_action: setup.to_member("action")?.map(A::try_from)?,
             contextual_bindings: value.to_member("bindings")?.required()?.try_into()?,
         })
