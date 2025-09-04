@@ -40,7 +40,7 @@ pub trait Action:
 /// Supports both keyboard and mouse input event definitions.
 #[derive(Debug)]
 pub struct BindingConfig<A> {
-    setup_context: BindingContextName,
+    initial_context: BindingContextName,
     setup_action: Option<A>,
     contextual_bindings: ContextualBindings<A>,
 }
@@ -57,8 +57,8 @@ impl<A: Action> BindingConfig<A> {
     }
 
     /// Returns the initial context name.
-    pub fn setup_context(&self) -> &BindingContextName {
-        &self.setup_context
+    pub fn initial_context(&self) -> &BindingContextName {
+        &self.initial_context
     }
 
     /// Returns the optional setup action that runs during initialization.
@@ -95,7 +95,7 @@ impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Bind
     fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
         let setup = value.to_member("setup")?.required()?;
         Ok(Self {
-            setup_context: setup.to_member("context")?.required()?.try_into()?,
+            initial_context: setup.to_member("context")?.required()?.try_into()?,
             setup_action: setup.to_member("action")?.map(A::try_from)?,
             contextual_bindings: value.to_member("bindings")?.required()?.try_into()?,
         })
