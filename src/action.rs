@@ -10,7 +10,7 @@ use std::sync::Arc;
 use crate::binding::ContextualBindings;
 use crate::json::LoadJsonError;
 
-pub use crate::binding::{Binding, BindingId};
+pub use crate::binding::Binding;
 pub use crate::matcher::InputMatcher;
 
 /// Marker trait for types that can be deserialized from JSON as action definitions.
@@ -30,7 +30,7 @@ pub struct ActionBindingSystem<A> {
     setup_action: Option<A>,
     contextual_bindings: ContextualBindings<A>,
     last_input: Option<tuinix::TerminalInput>,
-    last_binding_id: Option<BindingId>,
+    last_binding: Option<Arc<Binding<A>>>,
 }
 
 impl<A: Action> ActionBindingSystem<A> {
@@ -55,9 +55,9 @@ impl<A: Action> ActionBindingSystem<A> {
     /// against the current context's input bindings. If a matching binding is found and it
     /// specifies a context change, the active context will be switched before returning the
     /// binding.
-    pub fn handle_input(&mut self, input: tuinix::TerminalInput) -> Option<&Arc<Binding<A>>> {
+    pub fn handle_input(&mut self, input: tuinix::TerminalInput) -> Option<Arc<Binding<A>>> {
         self.last_input = Some(input);
-        self.last_binding_id = None;
+        self.last_binding = None;
 
         let binding = self
             .contextual_bindings
@@ -68,9 +68,9 @@ impl<A: Action> ActionBindingSystem<A> {
         if let Some(context) = &binding.context {
             self.context = context.clone();
         }
-        self.last_binding_id = Some(binding.id);
+        self.last_binding = Some(binding.clone());
 
-        Some(binding)
+        Some(binding.clone())
     }
 
     /// Sets the current context if it exists, returning true on success.
@@ -121,12 +121,13 @@ impl<A: Action> ActionBindingSystem<A> {
         self.last_input
     }
 
-    /// Returns the ID of the last input binding that was successfully matched, if any.
+    /// Returns the last input binding that was successfully matched, if any.
     ///
-    /// This tracks the unique identifier of the most recent binding returned by `handle_input()`.
-    /// Returns `None` if no input has been processed yet or if the last input didn't match any binding.
-    pub fn last_binding_id(&self) -> Option<BindingId> {
-        self.last_binding_id
+    /// This tracks the most recent binding returned by `handle_input()` when terminal input
+    /// was processed and matched against the current context's bindings. Returns `None` if no
+    /// input has been processed yet or if the last input didn't match any binding.
+    pub fn last_binding(&self) -> Option<Arc<Binding<A>>> {
+        self.last_binding.clone()
     }
 }
 
@@ -140,7 +141,7 @@ impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Acti
             setup_action: setup.to_member("action")?.map(A::try_from)?,
             contextual_bindings: value.to_member("bindings")?.required()?.try_into()?,
             last_input: None,
-            last_binding_id: None,
+            last_binding: None,
         })
     }
 }
