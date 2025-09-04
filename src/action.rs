@@ -142,6 +142,18 @@ impl<A: Action> ActionBindingSystem<A> {
     pub fn last_binding(&self) -> Option<Arc<Binding<A>>> {
         self.last_binding.clone()
     }
+
+    /// Checks if the given binding is the same as the last matched binding.
+    ///
+    /// This method compares the provided binding with the last binding that was
+    /// successfully matched by `handle_input()`. The comparison is done using
+    /// pointer equality (`Arc::ptr_eq`), which means it checks if both `Arc`s
+    /// point to the exact same binding instance in memory.
+    pub fn is_last_binding(&self, binding: &Arc<Binding<A>>) -> bool {
+        self.last_binding
+            .as_ref()
+            .is_some_and(|b| Arc::ptr_eq(b, binding))
+    }
 }
 
 impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ActionBindingSystem<A> {
