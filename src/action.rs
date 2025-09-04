@@ -29,8 +29,6 @@ pub struct ActionBindingSystem<A> {
     context: ContextName,
     setup_action: Option<A>,
     contextual_bindings: ContextualBindings<A>,
-    last_input: Option<tuinix::TerminalInput>,
-    last_binding: Option<Arc<Binding<A>>>,
 }
 
 impl<A: Action> ActionBindingSystem<A> {
@@ -56,34 +54,13 @@ impl<A: Action> ActionBindingSystem<A> {
     /// be stored as the last binding. To apply any context changes specified in the binding,
     /// call `apply_last_context_switch()` after this method.
     pub fn handle_input(&mut self, input: tuinix::TerminalInput) -> Option<Arc<Binding<A>>> {
-        self.last_input = Some(input);
-        self.last_binding = None;
-
         let binding = self
             .contextual_bindings
             .bindings
             .get(&self.context)?
             .iter()
             .find(|b| b.matches(input))?;
-
-        self.last_binding = Some(binding.clone());
         Some(binding.clone())
-    }
-
-    /// Applies the context switch from the last matched binding, if any.
-    ///
-    /// This method should be called after `handle_input()` to apply any context changes
-    /// specified in the matched binding. Returns `true` if a context switch was applied,
-    /// or `false` if no context switch was needed or no binding was matched.
-    pub fn apply_last_context_switch(&mut self) -> bool {
-        if let Some(binding) = &self.last_binding
-            && let Some(context) = &binding.context
-        {
-            self.context = context.clone();
-            true
-        } else {
-            false
-        }
     }
 
     /// Sets the current context if it exists, returning true on success.
@@ -124,36 +101,6 @@ impl<A: Action> ActionBindingSystem<A> {
             .iter()
             .map(|(k, v)| (k, &v[..]))
     }
-
-    /// Returns the last terminal input that was processed, if any.
-    ///
-    /// This tracks the most recent input passed to `handle_input()`, regardless of whether
-    /// it resulted in a matching input binding. Returns `None` if no input has been processed yet.
-    /// The input can be either a keyboard event or a mouse event.
-    pub fn last_input(&self) -> Option<tuinix::TerminalInput> {
-        self.last_input
-    }
-
-    /// Returns the last input binding that was successfully matched, if any.
-    ///
-    /// This tracks the most recent binding returned by `handle_input()` when terminal input
-    /// was processed and matched against the current context's bindings. Returns `None` if no
-    /// input has been processed yet or if the last input didn't match any binding.
-    pub fn last_binding(&self) -> Option<Arc<Binding<A>>> {
-        self.last_binding.clone()
-    }
-
-    /// Checks if the given binding is the same as the last matched binding.
-    ///
-    /// This method compares the provided binding with the last binding that was
-    /// successfully matched by `handle_input()`. The comparison is done using
-    /// pointer equality (`Arc::ptr_eq`), which means it checks if both `Arc`s
-    /// point to the exact same binding instance in memory.
-    pub fn is_last_binding(&self, binding: &Arc<Binding<A>>) -> bool {
-        self.last_binding
-            .as_ref()
-            .is_some_and(|b| Arc::ptr_eq(b, binding))
-    }
 }
 
 impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ActionBindingSystem<A> {
@@ -165,8 +112,6 @@ impl<'text, 'raw, A: Action> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Acti
             context: setup.to_member("context")?.required()?.try_into()?,
             setup_action: setup.to_member("action")?.map(A::try_from)?,
             contextual_bindings: value.to_member("bindings")?.required()?.try_into()?,
-            last_input: None,
-            last_binding: None,
         })
     }
 }
