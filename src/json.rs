@@ -266,7 +266,7 @@ impl<'text, 'raw> Preprocessor<'text, 'raw> {
             .push_str(&self.json.text()[self.last_position..start_position]);
         self.last_position = value.position();
 
-        if let Some(env_name) = value.to_member("env!")?.get() {
+        if let Some(env_name) = value.to_member("env!").ok().and_then(|v| v.get()) {
             let default_value = value.to_member("default")?.get();
             self.process_env(env_name, default_value)?;
             self.last_position = end_position;
@@ -305,6 +305,21 @@ impl<'text, 'raw> Preprocessor<'text, 'raw> {
             return Err(name.invalid("environment variable is not set or empty"));
         };
         write!(self.processed, "{json}").expect("infallible");
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_env_preprocessing_with_default() -> Result<(), nojson::JsonParseError> {
+        let original_text = r#"[1, {"env!": "TEST_ENVVAR_SECOND", "default": 2}, 3]"#;
+        let json = nojson::RawJson::parse(original_text)?;
+        let mut preprocessor = Preprocessor::new(&json);
+        preprocessor.process()?;
+        assert_eq!(preprocessor.processed, "[1, 2, 3]");
         Ok(())
     }
 }
