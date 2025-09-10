@@ -264,6 +264,24 @@ fn collect_references<'text, 'raw>(
     }
 }
 
+/// TODO: private
+#[derive(Debug)]
+pub struct Preprocessor<'text, 'raw> {
+    json: &'raw nojson::RawJson<'text>,
+    processed: String,
+    last_position: usize,
+}
+
+impl<'text, 'raw> Preprocessor<'text, 'raw> {
+    fn new(json: &'raw nojson::RawJson<'text>) -> Self {
+        Self {
+            json,
+            processed: String::new(),
+            last_position: 0,
+        }
+    }
+}
+
 #[derive(Debug)]
 struct VariableResolver<'text, 'raw> {
     json: &'raw nojson::RawJson<'text>,
