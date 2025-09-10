@@ -264,7 +264,7 @@ impl<'text, 'raw> Preprocessor<'text, 'raw> {
 
         self.processed
             .push_str(&self.json.text()[self.last_position..start_position]);
-        self.last_position = value.position();
+        self.last_position = start_position;
 
         if let Some(env_name) = value.to_member("env!").ok().and_then(|v| v.get()) {
             let default_value = value.to_member("default")?.get();
