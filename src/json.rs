@@ -273,12 +273,71 @@ pub struct Preprocessor<'text, 'raw> {
 }
 
 impl<'text, 'raw> Preprocessor<'text, 'raw> {
-    fn new(json: &'raw nojson::RawJson<'text>) -> Self {
+    /// TODO: private
+    pub fn new(json: &'raw nojson::RawJson<'text>) -> Self {
         Self {
             json,
             processed: String::new(),
             last_position: 0,
         }
+    }
+
+    /// TODO: private
+    pub fn process(&mut self) -> Result<(), nojson::JsonParseError> {
+        self.process_value(self.json.value())
+    }
+
+    fn process_value(
+        &mut self,
+        value: nojson::RawJsonValue<'text, 'raw>,
+    ) -> Result<(), nojson::JsonParseError> {
+        let start_position = value.position();
+        let end_position = start_position + value.as_raw_str().len();
+
+        self.processed
+            .push_str(&self.json.text()[self.last_position..start_position]);
+        self.last_position = value.position();
+
+        if let Some(env_name) = value.to_member("env!")?.get() {
+            let default_value = value.to_member("default")?.get();
+            self.process_env(env_name, default_value)?;
+            self.last_position = end_position;
+        } else if let Ok(elements) = value.to_array() {
+            for element in elements {
+                self.process_value(element)?;
+            }
+        } else if let Ok(members) = value.to_object() {
+            for (_member_name, member_value) in members {
+                self.process_value(member_value)?;
+            }
+        }
+
+        self.processed
+            .push_str(&self.json.text()[self.last_position..end_position]);
+        self.last_position = end_position;
+
+        Ok(())
+    }
+
+    fn process_env(
+        &mut self,
+        name: nojson::RawJsonValue<'text, 'raw>,
+        default: Option<nojson::RawJsonValue<'text, 'raw>>,
+    ) -> Result<(), nojson::JsonParseError> {
+        let name_str = name.to_unquoted_string_str()?;
+        let json = if let Ok(value) = std::env::var(name_str.as_ref())
+            && !value.is_empty()
+        {
+            nojson::RawJsonOwned::parse(&value)
+                .or_else(|_| nojson::RawJsonOwned::parse(nojson::Json(value).to_string()))
+                .expect("infallible")
+        } else if let Some(default) = default {
+            default.extract().into_owned()
+        } else {
+            return Err(name.invalid("environment variable is not set or empty"));
+        };
+        write!(self.processed, "{json}").expect("infallible");
+        Ok(())
     }
 }
 
