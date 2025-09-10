@@ -1,6 +1,5 @@
 //! JSON/JSONC utilities.
 use std::borrow::Cow;
-use std::collections::{BTreeMap, HashMap};
 use std::fmt::Write;
 use std::path::{Path, PathBuf};
 
@@ -127,15 +126,11 @@ where
     let (json, _) = nojson::RawJson::parse_jsonc(text)
         .map_err(|error| LoadJsonError::json(name, text, error))?;
 
-    let resolver =
-        VariableResolver::new(&json).map_err(|error| LoadJsonError::json(name, text, error))?;
-    if resolver.references.is_empty() {
-        return f(json.value()).map_err(|error| LoadJsonError::json(name, text, error));
-    }
-
-    let text = resolver
-        .resolve(json.value())
+    let mut preprocessor = Preprocessor::new(&json);
+    preprocessor
+        .process()
         .map_err(|error| LoadJsonError::json(name, text, error))?;
+    let text = preprocessor.processed;
     let value = nojson::RawJson::parse_jsonc(&text)
         .and_then(|(json, _)| f(json.value()))
         .map_err(|error| LoadJsonError::json(name, &text, error))?;
@@ -240,258 +235,91 @@ fn format_line_around_position(line: &str, column_pos: usize) -> (String, usize)
     (result, new_column_pos)
 }
 
-fn collect_references<'text, 'raw>(
-    value: nojson::RawJsonValue<'text, 'raw>,
-    references: &mut BTreeMap<usize, nojson::RawJsonValue<'text, 'raw>>,
-) {
-    if let Ok(array) = value.to_array() {
-        for value in array {
-            collect_references(value, references);
-        }
-    } else if let Ok(object) = value.to_object() {
-        for (i, (member_name, member_value)) in object.enumerate() {
-            if i == 0
-                && member_name
-                    .to_unquoted_string_str()
-                    .is_ok_and(|s| s == "ref")
-            {
-                references.insert(value.position(), member_value);
-                break;
-            } else {
-                collect_references(member_value, references);
-            }
-        }
-    }
-}
-
 #[derive(Debug)]
-struct VariableResolver<'text, 'raw> {
+struct Preprocessor<'text, 'raw> {
     json: &'raw nojson::RawJson<'text>,
-    definitions: HashMap<String, VariableDefinition<'text, 'raw>>,
-    references: BTreeMap<usize, String>,
-    resolved: String,
-    resolved_values: BTreeMap<usize, std::ops::Range<usize>>, // original pos => resolved range
+    processed: String,
     last_position: usize,
 }
 
-impl<'text, 'raw> VariableResolver<'text, 'raw> {
-    fn new(json: &'raw nojson::RawJson<'text>) -> Result<Self, nojson::JsonParseError> {
-        let value = json.value();
-        let definitions: HashMap<_, _> = value
-            .to_member("variables")?
-            .map(TryFrom::try_from)?
-            .unwrap_or_default();
-        let mut unchecked_references = BTreeMap::new();
-        collect_references(value, &mut unchecked_references);
-
-        let mut references = BTreeMap::new();
-        for (position, value) in unchecked_references {
-            let name = value.to_unquoted_string_str()?;
-            if !definitions.contains_key(name.as_ref()) {
-                return Err(value.invalid("undefined variable name".to_string()));
-            }
-            references.insert(position, name.into_owned());
-        }
-
-        Ok(Self {
+impl<'text, 'raw> Preprocessor<'text, 'raw> {
+    fn new(json: &'raw nojson::RawJson<'text>) -> Self {
+        Self {
             json,
-            definitions,
-            references,
-            resolved: String::new(),
-            resolved_values: BTreeMap::new(),
+            processed: String::new(),
             last_position: 0,
-        })
-    }
-}
-
-impl<'text, 'raw> VariableResolver<'text, 'raw> {
-    pub fn resolve(
-        mut self,
-        value: nojson::RawJsonValue<'text, 'raw>,
-    ) -> Result<String, nojson::JsonParseError> {
-        self.resolve_value(value)?;
-        Ok(self.resolved)
+        }
     }
 
-    fn resolve_const(
+    fn process(&mut self) -> Result<(), nojson::JsonParseError> {
+        self.process_value(self.json.value())
+    }
+
+    fn process_value(
         &mut self,
-        name: &str,
-        def: nojson::RawJsonValue<'text, 'raw>,
         value: nojson::RawJsonValue<'text, 'raw>,
     ) -> Result<(), nojson::JsonParseError> {
-        let json = if let Some(range) = self.resolved_values.get(&value.position()).cloned() {
-            let text = &self.resolved[range];
-            nojson::RawJsonOwned::parse_jsonc(text)
-                .map_err(|e| self.invalid_json(value, "resolved", text, e))?
-                .0
-        } else {
-            value.extract().into_owned()
-        };
+        let start_position = value.position();
+        let end_position = start_position + value.as_raw_str().len();
 
-        write!(self.resolved, "{json}").expect("infallible");
-        self.definitions
-            .insert(name.to_owned(), VariableDefinition::Resolved { def, json });
+        self.processed
+            .push_str(&self.json.text()[self.last_position..start_position]);
+        self.last_position = start_position;
+
+        if let Some(env_name) = value.to_member("env!").ok().and_then(|v| v.get()) {
+            let default_value = value.to_member("default")?.get();
+            self.process_env(env_name, default_value)?;
+            self.last_position = end_position;
+        } else if let Ok(elements) = value.to_array() {
+            for element in elements {
+                self.process_value(element)?;
+            }
+        } else if let Ok(members) = value.to_object() {
+            for (_member_name, member_value) in members {
+                self.process_value(member_value)?;
+            }
+        }
+
+        self.processed
+            .push_str(&self.json.text()[self.last_position..end_position]);
+        self.last_position = end_position;
+
         Ok(())
     }
 
-    fn invalid_json(
-        &self,
-        value: nojson::RawJsonValue<'text, 'raw>,
-        kind: &str,
-        text: &str,
-        error: nojson::JsonParseError,
-    ) -> nojson::JsonParseError {
-        let message = format!(
-            r#"failed to parse {kind} JSON
-```jsonc
-// This is the resolved JSON
-// ERROR: {error}
-{text}
-```
-"#
-        );
-        value.invalid(message)
-    }
-
-    fn resolve_env(
+    fn process_env(
         &mut self,
-        name: &str,
-        ref_value: nojson::RawJsonValue<'text, 'raw>,
-        def: nojson::RawJsonValue<'text, 'raw>,
+        name: nojson::RawJsonValue<'text, 'raw>,
         default: Option<nojson::RawJsonValue<'text, 'raw>>,
     ) -> Result<(), nojson::JsonParseError> {
-        let json = if let Ok(value) = std::env::var(name)
+        let name_str = name.to_unquoted_string_str()?;
+        let json = if let Ok(value) = std::env::var(name_str.as_ref())
             && !value.is_empty()
         {
             nojson::RawJsonOwned::parse(&value)
                 .or_else(|_| nojson::RawJsonOwned::parse(nojson::Json(value).to_string()))
                 .expect("infallible")
         } else if let Some(default) = default {
-            if let Some(range) = self.resolved_values.get(&default.position()).cloned() {
-                let text = &self.resolved[range];
-                nojson::RawJsonOwned::parse_jsonc(text)
-                    .map_err(|e| self.invalid_json(default, "resolved", text, e))?
-                    .0
-            } else {
-                default.extract().into_owned()
-            }
+            default.extract().into_owned()
         } else {
-            return Err(ref_value.invalid(format!("environment variable {name} is not set")));
+            return Err(name.invalid("environment variable is not set or empty"));
         };
-
-        write!(self.resolved, "{json}").expect("infallible");
-        self.definitions
-            .insert(name.to_owned(), VariableDefinition::Resolved { def, json });
+        write!(self.processed, "{json}").expect("infallible");
         Ok(())
     }
+}
 
-    fn resolve_value(
-        &mut self,
-        value: nojson::RawJsonValue<'text, 'raw>,
-    ) -> Result<(), nojson::JsonParseError> {
-        let end_position = value.position() + value.as_raw_str().len();
-        let after_start_position = self.resolved.len();
-        if let Some(variable_name) = self.references.remove(&value.position()) {
-            let def = &self.definitions[&variable_name];
-            if value.position() < def.position() {
-                return Err(value.invalid("variable reference appears before its definition"));
-            }
-            match def {
-                VariableDefinition::Const { def, value } => {
-                    self.resolve_const(&variable_name, *def, *value)?;
-                }
-                VariableDefinition::Env { def, default } => {
-                    self.resolve_env(&variable_name, value, *def, *default)?;
-                }
-                VariableDefinition::Resolved { json, .. } => {
-                    write!(self.resolved, "{json}").expect("infallible");
-                }
-            };
-            self.last_position = end_position;
-        } else if !self.contains_ref(value) {
-        } else if let Ok(array) = value.to_array() {
-            for value in array {
-                self.resolved
-                    .push_str(&self.json.text()[self.last_position..value.position()]);
-                self.last_position = value.position();
-                self.resolve_value(value)?;
-            }
-        } else if let Ok(object) = value.to_object() {
-            for (_, value) in object {
-                self.resolved
-                    .push_str(&self.json.text()[self.last_position..value.position()]);
-                self.last_position = value.position();
-                self.resolve_value(value)?;
-            }
-        } else {
-            panic!("bug");
-        }
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-        self.resolved
-            .push_str(&self.json.text()[self.last_position..end_position]);
-        self.last_position = end_position;
-
-        let after_end_position = self.resolved.len();
-        self.resolved_values.insert(
-            value.position(),
-            std::ops::Range {
-                start: after_start_position,
-                end: after_end_position,
-            },
-        );
+    #[test]
+    fn test_env_preprocessing_with_default() -> Result<(), nojson::JsonParseError> {
+        let original_text = r#"[1, {"env!": "TEST_ENVVAR_SECOND", "default": 2}, 3]"#;
+        let json = nojson::RawJson::parse(original_text)?;
+        let mut preprocessor = Preprocessor::new(&json);
+        preprocessor.process()?;
+        assert_eq!(preprocessor.processed, "[1, 2, 3]");
         Ok(())
-    }
-
-    fn contains_ref(&self, value: nojson::RawJsonValue<'text, 'raw>) -> bool {
-        let end_position = value.position() + value.as_raw_str().len();
-        self.references
-            .range(value.position()..end_position)
-            .next()
-            .is_some()
-    }
-}
-
-#[derive(Debug)]
-enum VariableDefinition<'text, 'raw> {
-    Const {
-        def: nojson::RawJsonValue<'text, 'raw>,
-        value: nojson::RawJsonValue<'text, 'raw>,
-    },
-    Env {
-        def: nojson::RawJsonValue<'text, 'raw>,
-        default: Option<nojson::RawJsonValue<'text, 'raw>>,
-    },
-    Resolved {
-        def: nojson::RawJsonValue<'text, 'raw>,
-        json: nojson::RawJsonOwned,
-    },
-}
-
-impl<'text, 'raw> VariableDefinition<'text, 'raw> {
-    fn position(&self) -> usize {
-        match self {
-            Self::Const { def, .. } | Self::Env { def, .. } | Self::Resolved { def, .. } => {
-                def.position()
-            }
-        }
-    }
-}
-
-impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for VariableDefinition<'text, 'raw> {
-    type Error = nojson::JsonParseError;
-
-    fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
-        let ty = value.to_member("type")?.required()?;
-        match ty.to_unquoted_string_str()?.as_ref() {
-            "const" => Ok(Self::Const {
-                def: value,
-                value: value.to_member("value")?.required()?,
-            }),
-            "env" => Ok(Self::Env {
-                def: value,
-                default: value.to_member("default")?.get(),
-            }),
-            _ => Err(ty.invalid("unknown variable type")),
-        }
     }
 }
