@@ -78,7 +78,7 @@ impl<A: Action> BindingConfig<A> {
     /// Returns an iterator over all contexts and their associated input bindings.
     ///
     /// This provides access to all configured contexts, not just the currently active one.
-    pub fn all_bindings(&self) -> impl '_ + Iterator<Item = (&BindingContextName, &[Binding<A>])> {
+    pub fn all_bindings(&self) -> impl Iterator<Item = (&BindingContextName, &[Binding<A>])> {
         self.contextual_bindings
             .bindings
             .iter()
